@@ -1,0 +1,38 @@
+- name: Fetch join command from control plane
+  become: yes
+  become_user: asmae
+  command: kubeadm token create --print-join-command
+  register: join_command
+  run_once: true
+  when: inventory_hostname in groups['control-plane']
+
+- name: Debug join command
+  debug:
+    var: join_command
+  when: inventory_hostname in groups['control-plane']
+
+- name: Save join command for worker nodes
+  copy:
+    content: "{{ hostvars[groups['control-plane'][0]]['join_command']['stdout'] }}"
+    dest: /tmp/join-command.sh
+    mode: '0755'
+  when: inventory_hostname in groups['workers']
+
+- name: Join worker nodes to the cluster
+  become: yes
+  shell: /tmp/join-command.sh
+  args:
+    executable: /bin/bash
+  register: join_result
+  ignore_errors: yes
+  when: inventory_hostname in groups['workers']
+
+- name: Debug join result
+  debug:
+    var: join_result
+  when: inventory_hostname in groups['workers']
+
+- name: Check join status
+  fail:
+    msg: "Failed to join worker node to cluster"
+  when: inventory_hostname in groups['workers'] and join_result.rc != 0

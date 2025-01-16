@@ -1,0 +1,46 @@
+- name: Install Kubernetes packages
+  apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+    allow_unauthenticated: yes
+
+- name: Hold Kubernetes packages
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+  become: true
+
+- name: Mark Kubernetes packages as held
+  command: apt-mark hold {{ item }}
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+  become: true
+
+- name: Verify kubectl installation
+  command: kubectl version --client
+  register: kubectl_version
+  failed_when: kubectl_version.rc != 0
+  changed_when: false
+  when: inventory_hostname in groups['k8s_cluster']
+
+- name: Install containerd
+  apt:
+    name: containerd
+    state: present
+  when: inventory_hostname in groups['k8s_cluster']
+
+- name: Start and enable containerd
+  systemd:
+    name: containerd
+    state: started
+    enabled: yes
+  when: inventory_hostname in groups['k8s_cluster']

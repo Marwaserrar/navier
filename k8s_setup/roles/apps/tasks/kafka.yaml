@@ -1,0 +1,11 @@
+
+    - name: Copy Kafka manifest template to host
+      ansible.builtin.template:
+        src: ../templates/kafka-deployment.yaml.j2
+        dest: /tmp/kafka-deployment.yaml
+
+    - name: Apply Kafka deployment
+      ansible.builtin.shell: "kubectl --kubeconfig=/home/asmae/.kube/config apply -f /tmp/kafka-deployment.yaml"
+      args:
+        chdir: /tmp
+      when: inventory_hostname in groups['control-plane']

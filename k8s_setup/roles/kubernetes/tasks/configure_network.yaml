@@ -1,0 +1,17 @@
+# - name: Download Calico manifest
+#   get_url:
+#     url: https://raw.githubusercontent.com/projectcalico/calico/v3.29.1/manifests/tigera-operator.yaml
+#     dest: /tmp/calico.yaml
+#   when: inventory_hostname in groups['control-plane']
+
+- name: Deploy Calico for pod networking
+  shell: kubectl --kubeconfig=/home/asmae/.kube/config  apply -f https://docs.projectcalico.org/manifests/calico.yaml --validate=false
+  when: inventory_hostname in groups['control-plane']
+
+# - name: Wait for Calico pods to be ready
+#   shell: kubectl --kubeconfig=/home/asmae/.kube/config get pods -n kube-system -l k8s-app=calico-node -o jsonpath='{.items[*].status.containerStatuses[0].ready}' | grep -q true
+#   register: calico_ready
+#   until: calico_ready.rc == 0
+#   retries: 30
+#   delay: 10
+#   when: inventory_hostname in groups['control-plane']

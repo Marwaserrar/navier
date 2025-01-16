@@ -1,0 +1,17 @@
+    - name: Install dependencies
+      import_tasks: install_dependencies.yaml
+
+    - name: Apply sysctl changes
+      ansible.builtin.command: sysctl --system
+
+    - name: Initialize Kubernetes master
+      import_tasks: init_master.yaml
+
+
+    - name: Join workers to cluster
+      import_tasks: join_workers.yaml
+
+
+    - name: Configure network
+      import_tasks: configure_network.yaml
+   

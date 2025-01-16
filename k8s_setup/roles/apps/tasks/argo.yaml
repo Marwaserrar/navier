@@ -1,0 +1,151 @@
+- name: Label k8s-node-3 with role=argocd-server
+  command: kubectl --kubeconfig=/home/asmae/.kube/config label node k8s-node-3 role=argocd-server
+  when: inventory_hostname in groups['control-plane']
+
+- name: Create namespace for ArgoCD
+  command: kubectl --kubeconfig=/home/asmae/.kube/config create namespace argocd
+  ignore_errors: yes
+  when: inventory_hostname in groups['control-plane']
+
+- name: Apply ArgoCD installation manifests
+  command: kubectl --kubeconfig=/home/asmae/.kube/config apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+  when: inventory_hostname in groups['control-plane']
+
+
+- name: Add Node Affinity to ArgoCD server deployment
+  command: >
+    kubectl --kubeconfig=/home/asmae/.kube/config patch deployment argocd-server -n argocd --type="json" -p='[
+      {
+        "op": "add",
+        "path": "/spec/template/spec/affinity",
+        "value": {
+          "nodeAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+              "nodeSelectorTerms": [
+                {
+                  "matchExpressions": [
+                    {
+                      "key": "role",
+                      "operator": "In",
+                      "values": ["argocd-server"]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]'
+  when: inventory_hostname in groups['control-plane']
+
+- name: Download ArgoCD CLI
+  get_url:
+    url: https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+    dest: /tmp/argocd-linux-amd64
+    mode: '0755'
+  when: inventory_hostname in groups['control-plane']
+
+- name: Move ArgoCD CLI to /usr/local/bin
+  command: mv /tmp/argocd-linux-amd64 /usr/local/bin/argocd
+  become: yes
+  when: inventory_hostname in groups['control-plane']
+
+- name: Ensure ArgoCD CLI is executable
+  file:
+    path: /usr/local/bin/argocd
+    mode: '0755'
+  when: inventory_hostname in groups['control-plane']
+
+- name: Patch ArgoCD server service to use NodePort
+  command: >
+    kubectl --kubeconfig=/home/asmae/.kube/config patch svc argocd-server -n argocd
+    -p '{"spec": {"type": "NodePort"}}'
+  when: inventory_hostname in groups['control-plane']
+
+- name: Get ArgoCD server NodePort
+  command: kubectl --kubeconfig=/home/asmae/.kube/config get svc argocd-server -n argocd -o jsonpath='{.spec.ports[0].nodePort}'
+  register: argocd_nodeport
+  when: inventory_hostname in groups['control-plane']
+
+- name: Set node IP from inventory
+  set_fact:
+    node_ip: "{{ hostvars['worker2']['ansible_host'] }}"
+  when: inventory_hostname in groups['control-plane']
+
+- name: Print Node IP
+  debug:
+    var: node_ip
+  when: inventory_hostname in groups['control-plane']
+
+- name: Get ArgoCD server NodePort
+  command: kubectl --kubeconfig=/home/asmae/.kube/config get svc argocd-server -n argocd -o jsonpath='{.spec.ports[0].nodePort}'
+  register: argocd_nodeport
+  when: inventory_hostname in groups['control-plane']
+
+
+- name: Wait for ArgoCD secret to be available
+  shell: |
+    kubectl --kubeconfig=/home/asmae/.kube/config get secret argocd-initial-admin-secret -n argocd
+  register: check_secret
+  retries: 10
+  delay: 10
+  until: check_secret.rc == 0
+  when: inventory_hostname in groups['control-plane']
+
+- name: Get initial admin password
+  shell: |
+    kubectl --kubeconfig=/home/asmae/.kube/config get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 -d
+  register: argocd_admin_password
+  failed_when: argocd_admin_password.stdout == ""
+  when: inventory_hostname in groups['control-plane']
+
+- name: Debug - Check command output and errors
+  debug:
+    msg:
+      - "stdout: {{ argocd_admin_password.stdout }}"
+      - "stderr: {{ argocd_admin_password.stderr }}"
+      - "return code: {{ argocd_admin_password.rc }}"
+  when: inventory_hostname in groups['control-plane']
+
+
+- name: Print ArgoCD login command
+  debug:
+    msg: "ArgoCD login command: argocd login {{ node_ip }}:{{ argocd_nodeport.stdout }} --username admin --password {{ argocd_admin_password.stdout }} --insecure"
+  when: inventory_hostname in groups['control-plane']
+
+- name: Login to ArgoCD
+  command: argocd login {{ node_ip }}:{{ argocd_nodeport.stdout }} --username admin --password {{ argocd_admin_password.stdout }} --insecure
+  when: inventory_hostname in groups['control-plane']
+
+- name: Add GitHub repository to ArgoCD
+  command: >
+    argocd repo add https://github.com/Azed02/dist-pipeline.git --type git --loglevel debug
+  register: add_repo_result
+  failed_when: add_repo_result.rc != 0
+  when: inventory_hostname in groups['control-plane']
+
+# - name: Debug - Add repo error
+#   debug:
+#     var: add_repo_result
+#   when: add_repo_result.failed
+
+- name: Create ArgoCD application with auto-heal and auto-prune
+  command: >
+    argocd app create myapp
+    --repo https://github.com/Azed02/dist-pipeline.git
+    --path manifests
+    --dest-server https://kubernetes.default.svc
+    --dest-namespace default
+    --sync-policy automated
+    --auto-prune=true
+    --self-heal=true
+  when: inventory_hostname in groups['control-plane']
+
+- name: Sync ArgoCD application
+  command: argocd app sync myapp
+  register: sync_result
+  retries: 5
+  delay: 15
+  until: sync_result.rc == 0
+  when: inventory_hostname in groups['control-plane']
