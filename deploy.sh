@@ -6,7 +6,7 @@ export GOOGLE_APPLICATION_CREDENTIALS='/tmp/key-file.json'
 
 echo "Starting Terraform apply..."
 cd terraform
-terraform init 
+terraform init --upgrade
 terraform destroy --auto-approve
 terraform apply --auto-approve
 
