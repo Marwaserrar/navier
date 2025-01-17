@@ -79,8 +79,8 @@ jobs:
 
       - name: Add SSH Public Key
         run: |
-          mkdir -p tmp/.ssh
-          echo "${{ secrets.TF_PUB }}" > tmp/.ssh/gcp_key.pub
+          mkdir -p /tmp/.ssh
+          echo "${{ secrets.TF_PUB }}" > /tmp/.ssh/gcp_key.pub
           chmod 644 tmp/.ssh/gcp_key.pub
         shell: bash
 
