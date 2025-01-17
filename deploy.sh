@@ -5,6 +5,7 @@ export ANSIBLE_HOST_KEY_CHECKING=False
 
 echo "Starting Terraform apply..."
 cd terraform
+terraform init --reconfigure
 terraform destroy --auto-approve
 terraform apply --auto-approve
 
