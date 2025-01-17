@@ -2,6 +2,7 @@
 
 set -e  
 export ANSIBLE_HOST_KEY_CHECKING=False
+export GOOGLE_APPLICATION_CREDENTIALS='/tmp/key-file.json'
 
 echo "Starting Terraform apply..."
 cd terraform
