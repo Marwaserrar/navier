@@ -117,10 +117,15 @@
 - name: Login to ArgoCD
   command: argocd login {{ node_ip }}:{{ argocd_nodeport.stdout }} --username admin --password {{ argocd_admin_password.stdout }} --insecure
   when: inventory_hostname in groups['control-plane']
+  register: argocd_login_output
 
+- name: Debug ArgoCD login output
+  debug:
+    var: argocd_login_output.stdout
+    
 - name: Add GitHub repository to ArgoCD
   command: >
-    argocd repo add https://github.com/Azed02/dist-pipeline.git --type git --loglevel debug
+    argocd repo add https://github.com/Azed02/sdtd.git --type git --loglevel debug
   register: add_repo_result
   failed_when: add_repo_result.rc != 0
   when: inventory_hostname in groups['control-plane']
@@ -133,8 +138,8 @@
 - name: Create ArgoCD application with auto-heal and auto-prune
   command: >
     argocd app create myapp
-    --repo https://github.com/Azed02/dist-pipeline.git
-    --path manifests
+    --repo https://github.com/Azed02/sdtd.git
+    --path app/manifests
     --dest-server https://kubernetes.default.svc
     --dest-namespace default
     --sync-policy automated
