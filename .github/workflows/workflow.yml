@@ -81,5 +81,6 @@ jobs:
 
       - name: set it up
         run: |
+          chmod +x ./deploy.sh
           ./deploy.sh
         shell: bash
