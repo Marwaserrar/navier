@@ -1,4 +1,7 @@
 terraform {
+   backend "gcs" {
+    bucket = "state-sdtd"
+  }
   required_providers {
     google = {
       source  = "hashicorp/google"
@@ -10,6 +13,7 @@ terraform {
     }
   }
 }
+
 
 provider "google" {
   credentials = file("/tmp/key-file.json")
