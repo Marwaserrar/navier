@@ -10,6 +10,7 @@ terraform {
     }
   }
 }
+
 provider "google" {
   credentials = file("/tmp/key-file.json")
   project     = "my-first-for-kubespray"
