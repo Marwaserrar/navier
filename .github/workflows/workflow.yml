@@ -54,7 +54,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-        
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -85,6 +85,6 @@ jobs:
       - name: set it up
         run: |
           pwd
-          chmod +x deploy.sh
-          deploy.sh
+          chmod +x ./deploy.sh
+          ./deploy.sh
         shell: bash
