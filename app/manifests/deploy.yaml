@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
       - name: mock-app
-        image: asmaezaidi/mock-app:29
+        image: asmaezaidi/mock-app:30
         ports:
         - containerPort: 8080
