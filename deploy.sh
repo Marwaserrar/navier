@@ -12,9 +12,8 @@ terraform apply --auto-approve
 
 echo "Terraform apply completed."
 
-# Add a 15-second delay
 echo "Waiting for 60 seconds before starting Ansible playbook..."
-sleep 15
+sleep 60
 
 echo "Starting Ansible playbook..."
 ansible-playbook -i ../k8s_setup/inventory/hosts.yaml ../k8s_setup/playbook.yaml
