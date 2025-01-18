@@ -114,6 +114,10 @@
     msg: "ArgoCD login command: argocd login {{ node_ip }}:{{ argocd_nodeport.stdout }} --username admin --password {{ argocd_admin_password.stdout }} --insecure"
   when: inventory_hostname in groups['control-plane']
 
+- name: wait a little 
+  pause:
+    seconds: 60
+    
 - name: Login to ArgoCD
   command: argocd login {{ node_ip }}:{{ argocd_nodeport.stdout }} --username admin --password {{ argocd_admin_password.stdout }} --insecure
   when: inventory_hostname in groups['control-plane']
@@ -122,7 +126,7 @@
 - name: Debug ArgoCD login output
   debug:
     var: argocd_login_output.stdout
-    
+
 - name: Add GitHub repository to ArgoCD
   command: >
     argocd repo add https://github.com/Azed02/sdtd.git --type git --loglevel debug
