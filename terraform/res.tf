@@ -1,7 +1,6 @@
 terraform {
    backend "gcs" {
     bucket = "state-sdtd"
-
   }
   required_providers {
     google = {
@@ -17,7 +16,7 @@ terraform {
 
 
 provider "google" {
-  credentials = file("/Users/air/Documents/ensimag/google-cloud-sdk/bin/Desktop/key-file.json")
+  credentials = file("/tmp/key-file.json")
   project     = "my-first-for-kubespray"
   region      = "europe-west4"
 }
@@ -81,7 +80,7 @@ resource "google_compute_instance" "k8s_nodes" {
   }
 
   metadata = {
-    ssh-keys = "asmae:${file("/Users/air/.ssh/gcp_key.pub")}"
+    ssh-keys = "asmae:${file("/tmp/.ssh/gcp_key.pub")}"
   }
 
   service_account {
