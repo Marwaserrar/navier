@@ -1,6 +1,6 @@
 terraform {
    backend "gcs" {
-    bucket = "state-sdtd"
+    bucket = "state-sdtd-1"
   }
   required_providers {
     google = {
@@ -17,7 +17,7 @@ terraform {
 
 provider "google" {
   credentials = file("/tmp/key-file.json")
-  project     = "my-first-for-kubespray"
+  project     = "neon-runway-448317-q0"
   region      = "europe-west4"
 }
 
