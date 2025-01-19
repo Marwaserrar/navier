@@ -17,7 +17,7 @@ terraform {
 
 provider "google" {
   credentials = file("/tmp/key-file.json")
-  project     = "silver-course-448318-r7"
+  project     = "My First Project"
   region      = "europe-west4"
 }
 
