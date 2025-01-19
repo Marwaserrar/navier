@@ -1,6 +1,6 @@
 terraform {
    backend "gcs" {
-    bucket = "state-sdtd"
+    bucket = "bucket-marwa"
   }
   required_providers {
     google = {
@@ -84,7 +84,7 @@ resource "google_compute_instance" "k8s_nodes" {
   }
 
   service_account {
-  email  = "344086779587-compute@developer.gserviceaccount.com"
+  email  = "marwa-364@silver-course-448318-r7.iam.gserviceaccount.com"
   scopes = ["cloud-platform"] 
 }
 
