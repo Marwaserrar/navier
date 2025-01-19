@@ -84,7 +84,7 @@ resource "google_compute_instance" "k8s_nodes" {
   }
 
   service_account {
-  email  = "344086779587-compute@developer.gserviceaccount.com"
+  email  = "204949976738-compute@developer.gserviceaccount.com"
   scopes = ["cloud-platform"] 
 }
 
