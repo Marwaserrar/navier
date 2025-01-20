@@ -60,6 +60,13 @@ jobs:
         with:
           terraform_version: 1.5.0
 
+      - name: Cache Terraform
+        uses: actions/cache@v3
+        id: terraform-cache
+        with:
+          path: ${{ runner.tool_cache }}/terraform
+          key: terraform-${{ runner.os }}-${{ hashFiles('**/terraform-version') }}
+
   setup_ansible:
     runs-on: ubuntu-latest
     steps:
@@ -109,8 +116,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Restore Terraform Cache
+        uses: actions/cache@v3
+        id: terraform-cache
+        with:
+          path: ${{ runner.tool_cache }}/terraform
+          key: terraform-${{ runner.os }}-${{ hashFiles('**/terraform-version') }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
       - name: set it up
         run: |
+          pwd
+          chmod +x ./deploy.sh
+          ./deploy.sh
+        shell: bash
           pwd
           chmod +x ./deploy.sh
           ./deploy.sh
