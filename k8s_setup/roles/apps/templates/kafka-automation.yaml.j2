@@ -1,3 +1,18 @@
+{% raw %}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-scripts-cm
+data:
+  simulation_parameters.py: |
+    {{ lookup('file', 'templates/simulation_parameters.py') }}
+
+  kafka_producer.py: |
+    {{ lookup('file', 'templates/kafka_producer.py') }}
+
+  kafka_consumer.py: |
+    {{ lookup('file', 'templates/kafka_consumer.py') }}
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -49,23 +64,17 @@ spec:
         - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          mkdir -p /app &&
-          cd /app &&
-
-          # Write 'simulation_parameters.py'
-          cat << 'EOF' > simulation_parameters.py
-{{ lookup('file', 'templates/simulation_parameters.py') }}
-EOF
-
-          # Write producer script
-          cat << 'EOF' > kafka_producer.py
-{{ lookup('file', 'templates/kafka_producer.py') }}
-EOF
-
-          echo "Running producer..."
-          python kafka_producer.py
-          echo "Producer done. Keeping container alive."
+          echo "Running producer..." &&
+          python /scripts/kafka_producer.py &&
+          echo "Producer done. Keeping container alive." &&
           tail -f /dev/null
+      volumeMounts:
+        - name: scripts-volume
+          mountPath: /scripts
+  volumes:
+    - name: scripts-volume
+      configMap:
+        name: kafka-scripts-cm
   restartPolicy: Always
 ---
 apiVersion: v1
@@ -99,23 +108,17 @@ spec:
         - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          mkdir -p /app &&
-          cd /app &&
-
-          # Write 'simulation_parameters.py'
-          cat << 'EOF' > simulation_parameters.py
-{{ lookup('file', 'templates/simulation_parameters.py') }}
-EOF
-
-          # Write consumer script
-          cat << 'EOF' > kafka_consumer.py
-{{ lookup('file', 'templates/kafka_consumer.py') }}
-EOF
-
-          echo "Running consumer #1..."
-          python kafka_consumer.py
-          echo "Consumer #1 done. Keeping container alive."
+          echo "Running consumer #1..." &&
+          python /scripts/kafka_consumer.py &&
+          echo "Consumer #1 done. Keeping container alive." &&
           tail -f /dev/null
+      volumeMounts:
+        - name: scripts-volume
+          mountPath: /scripts
+  volumes:
+    - name: scripts-volume
+      configMap:
+        name: kafka-scripts-cm
   restartPolicy: Always
 ---
 apiVersion: v1
@@ -149,23 +152,17 @@ spec:
         - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          mkdir -p /app &&
-          cd /app &&
-
-          # Write 'simulation_parameters.py'
-          cat << 'EOF' > simulation_parameters.py
-{{ lookup('file', 'templates/simulation_parameters.py') }}
-EOF
-
-          # Write consumer script
-          cat << 'EOF' > kafka_consumer.py
-{{ lookup('file', 'templates/kafka_consumer.py') }}
-EOF
-
-          echo "Running consumer #2..."
-          python kafka_consumer.py
-          echo "Consumer #2 done. Keeping container alive."
+          echo "Running consumer #2..." &&
+          python /scripts/kafka_consumer.py &&
+          echo "Consumer #2 done. Keeping container alive." &&
           tail -f /dev/null
+      volumeMounts:
+        - name: scripts-volume
+          mountPath: /scripts
+  volumes:
+    - name: scripts-volume
+      configMap:
+        name: kafka-scripts-cm
   restartPolicy: Always
 ---
 apiVersion: v1
@@ -182,3 +179,4 @@ spec:
       targetPort: 8080
       nodePort: 30083
   type: NodePort
+{% endraw %}
