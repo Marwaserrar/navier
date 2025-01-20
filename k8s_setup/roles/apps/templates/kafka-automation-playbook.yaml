@@ -11,9 +11,9 @@ spec:
   containers:
     - name: kafka-cli-container
       image: python:3.9-slim
-      command: ["/bin/bash","-c","--"]
+      command: ["/bin/bash", "-c"]
       args:
-        - >
+        - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
           # Keep container alive for CLI usage
@@ -50,9 +50,9 @@ spec:
   containers:
     - name: kafka-producer-container
       image: python:3.9-slim
-      command: ["/bin/bash","-c","--"]
+      command: ["/bin/bash", "-c"]
       args:
-        - >
+        - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
           mkdir -p /app &&
@@ -104,9 +104,9 @@ spec:
   containers:
     - name: kafka-listener-1-container
       image: python:3.9-slim
-      command: ["/bin/bash","-c","--"]
+      command: ["/bin/bash", "-c"]
       args:
-        - >
+        - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
           mkdir -p /app &&
@@ -158,9 +158,9 @@ spec:
   containers:
     - name: kafka-listener-2-container
       image: python:3.9-slim
-      command: ["/bin/bash","-c","--"]
+      command: ["/bin/bash", "-c"]
       args:
-        - >
+        - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
           mkdir -p /app &&
