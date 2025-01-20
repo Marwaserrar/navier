@@ -135,15 +135,18 @@ jobs:
         with:
           terraform_version: 1.5.0
 
-      - name: Download GCP Credentials
-        uses: actions/download-artifact@v3
-        with:
-          name: gcp-credentials
-          path: /tmp
-
-      - name: Set GCP Credentials Environment Variable
+      - name: Authenticate with Google Cloud
         run: |
+          echo "${{ secrets.GCP_CRED }}" | base64 --decode > /tmp/key-file.json
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/key-file.json
+        shell: bash
+
+      - name: Add SSH Public Key
+        run: |
+          mkdir -p /tmp/.ssh
+          echo "${{ secrets.TF_PUB }}" > /tmp/.ssh/gcp_key.pub
+          chmod 644 /tmp/.ssh/gcp_key.pub
+        shell: bash
 
       - name: set it up
         run: |
