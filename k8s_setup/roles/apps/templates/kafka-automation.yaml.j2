@@ -13,12 +13,11 @@ spec:
     - name: kafka-cli-container
       image: python:3.9-slim
       command: ["/bin/bash","-c","--"]
-      args:
-        - >
-          apt-get update && apt-get install -y gcc libatlas-base-dev &&
-          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          # Keep container alive for CLI usage
-          tail -f /dev/null
+      args: |-
+        apt-get update && apt-get install -y gcc libatlas-base-dev &&
+        pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
+        # Keep container alive for CLI usage
+        tail -f /dev/null
   restartPolicy: Always
 
 ---
@@ -52,27 +51,26 @@ spec:
     - name: kafka-producer-container
       image: python:3.9-slim
       command: ["/bin/bash","-c","--"]
-      args:
-        - >
-          apt-get update && apt-get install -y gcc libatlas-base-dev &&
-          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          mkdir -p /app &&
-          cd /app &&
+      args: |-
+        apt-get update && apt-get install -y gcc libatlas-base-dev &&
+        pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
+        mkdir -p /app &&
+        cd /app &&
 
-          # Write 'simulation_parameters.py'
-          cat << 'EOF' > simulation_parameters.py
+        # Write 'simulation_parameters.py'
+        cat << 'EOF' > simulation_parameters.py
 {{ lookup('file', 'templates/simulation_parameters.py') }}
 EOF
 
-          # Write producer script
-          cat << 'EOF' > kafka_producer.py
+        # Write producer script
+        cat << 'EOF' > kafka_producer.py
 {{ lookup('file', 'templates/kafka_producer.py') }}
 EOF
 
-          echo "Running producer..." &&
-          python kafka_producer.py &&
-          echo "Producer done. Keeping container alive." &&
-          tail -f /dev/null
+        echo "Running producer..." &&
+        python kafka_producer.py &&
+        echo "Producer done. Keeping container alive." &&
+        tail -f /dev/null
   restartPolicy: Always
 
 ---
@@ -106,27 +104,26 @@ spec:
     - name: kafka-listener-1-container
       image: python:3.9-slim
       command: ["/bin/bash","-c","--"]
-      args:
-        - >
-          apt-get update && apt-get install -y gcc libatlas-base-dev &&
-          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          mkdir -p /app &&
-          cd /app &&
+      args: |-
+        apt-get update && apt-get install -y gcc libatlas-base-dev &&
+        pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
+        mkdir -p /app &&
+        cd /app &&
 
-          # Write 'simulation_parameters.py'
-          cat << 'EOF' > simulation_parameters.py
+        # Write 'simulation_parameters.py'
+        cat << 'EOF' > simulation_parameters.py
 {{ lookup('file', 'templates/simulation_parameters.py') }}
 EOF
 
-          # Write consumer script
-          cat << 'EOF' > kafka_consumer.py
+        # Write consumer script
+        cat << 'EOF' > kafka_consumer.py
 {{ lookup('file', 'templates/kafka_consumer.py') }}
 EOF
 
-          echo "Running consumer #1..." &&
-          python kafka_consumer.py &&
-          echo "Consumer #1 done. Keeping container alive." &&
-          tail -f /dev/null
+        echo "Running consumer #1..." &&
+        python kafka_consumer.py &&
+        echo "Consumer #1 done. Keeping container alive." &&
+        tail -f /dev/null
   restartPolicy: Always
 
 ---
@@ -160,27 +157,26 @@ spec:
     - name: kafka-listener-2-container
       image: python:3.9-slim
       command: ["/bin/bash","-c","--"]
-      args:
-        - >
-          apt-get update && apt-get install -y gcc libatlas-base-dev &&
-          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          mkdir -p /app &&
-          cd /app &&
+      args: |-
+        apt-get update && apt-get install -y gcc libatlas-base-dev &&
+        pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
+        mkdir -p /app &&
+        cd /app &&
 
-          # Write 'simulation_parameters.py'
-          cat << 'EOF' > simulation_parameters.py
+        # Write 'simulation_parameters.py'
+        cat << 'EOF' > simulation_parameters.py
 {{ lookup('file', 'templates/simulation_parameters.py') }}
 EOF
 
-          # Write consumer script
-          cat << 'EOF' > kafka_consumer.py
+        # Write consumer script
+        cat << 'EOF' > kafka_consumer.py
 {{ lookup('file', 'templates/kafka_consumer.py') }}
 EOF
 
-          echo "Running consumer #2..." &&
-          python kafka_consumer.py &&
-          echo "Consumer #2 done. Keeping container alive." &&
-          tail -f /dev/null
+        echo "Running consumer #2..." &&
+        python kafka_consumer.py &&
+        echo "Consumer #2 done. Keeping container alive." &&
+        tail -f /dev/null
   restartPolicy: Always
 
 ---
