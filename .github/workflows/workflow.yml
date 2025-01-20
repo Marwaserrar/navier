@@ -49,7 +49,7 @@ jobs:
           git add app/manifests/
           git diff --quiet && git diff --staged --quiet || (git commit -m "Update image version to ${{ github.run_number }}" && git push)
 
-  cluster_setup:
+  setup_terraform:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -60,10 +60,21 @@ jobs:
         with:
           terraform_version: 1.5.0
 
+  setup_ansible:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
       - name: Setup Ansible
         run: sudo apt-get update && sudo apt-get install -y ansible
 
-
+  setup_ssh:
+    runs-on: ubuntu-latest
+    needs: [setup_terraform, setup_ansible]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
       - name: Add SSH Private Key
         run: |
@@ -72,17 +83,31 @@ jobs:
           chmod 600 ~/.ssh/gcp_key
         shell: bash
 
-      - name: Authenticate with Google Cloud
-        run: |
-          echo "${{ secrets.GCP_CRED }}" | base64 --decode > /tmp/key-file.json
-        shell: bash
-
       - name: Add SSH Public Key
         run: |
           mkdir -p /tmp/.ssh
           echo "${{ secrets.TF_PUB }}" > /tmp/.ssh/gcp_key.pub
           chmod 644 /tmp/.ssh/gcp_key.pub
         shell: bash
+
+  authenticate_gcp:
+    runs-on: ubuntu-latest
+    needs: [setup_terraform, setup_ansible]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Authenticate with Google Cloud
+        run: |
+          echo "${{ secrets.GCP_CRED }}" | base64 --decode > /tmp/key-file.json
+        shell: bash
+
+  deploy_cluster:
+    runs-on: ubuntu-latest
+    needs: [setup_ssh, authenticate_gcp]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
       - name: set it up
         run: |
