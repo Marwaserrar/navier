@@ -1,7 +1,3 @@
----
-################################################################################
-# Pod 1: kafka-cli (shell with Kafka+GCP dependencies)
-################################################################################
 apiVersion: v1
 kind: Pod
 metadata:
@@ -12,15 +8,15 @@ spec:
   containers:
     - name: kafka-cli-container
       image: python:3.9-slim
-      command: ["/bin/bash", "-c"]
+      command: ["/bin/bash"]
       args:
+        - "-c"
         - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
           # Keep container alive for CLI usage
           tail -f /dev/null
   restartPolicy: Always
-
 ---
 apiVersion: v1
 kind: Service
@@ -36,11 +32,7 @@ spec:
       targetPort: 8080
       nodePort: 30080
   type: NodePort
-
 ---
-################################################################################
-# Pod 2: kafka-producer (runs the producer code automatically)
-################################################################################
 apiVersion: v1
 kind: Pod
 metadata:
@@ -51,8 +43,9 @@ spec:
   containers:
     - name: kafka-producer-container
       image: python:3.9-slim
-      command: ["/bin/bash", "-c"]
+      command: ["/bin/bash"]
       args:
+        - "-c"
         - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
@@ -74,7 +67,6 @@ EOF
           echo "Producer done. Keeping container alive."
           tail -f /dev/null
   restartPolicy: Always
-
 ---
 apiVersion: v1
 kind: Service
@@ -90,11 +82,7 @@ spec:
       targetPort: 8080
       nodePort: 30081
   type: NodePort
-
 ---
-################################################################################
-# Pod 3: kafka-listener-1 (runs the consumer)
-################################################################################
 apiVersion: v1
 kind: Pod
 metadata:
@@ -105,8 +93,9 @@ spec:
   containers:
     - name: kafka-listener-1-container
       image: python:3.9-slim
-      command: ["/bin/bash", "-c"]
+      command: ["/bin/bash"]
       args:
+        - "-c"
         - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
@@ -128,7 +117,6 @@ EOF
           echo "Consumer #1 done. Keeping container alive."
           tail -f /dev/null
   restartPolicy: Always
-
 ---
 apiVersion: v1
 kind: Service
@@ -144,11 +132,7 @@ spec:
       targetPort: 8080
       nodePort: 30082
   type: NodePort
-
 ---
-################################################################################
-# Pod 4: kafka-listener-2 (runs the consumer again, or a second instance)
-################################################################################
 apiVersion: v1
 kind: Pod
 metadata:
@@ -159,8 +143,9 @@ spec:
   containers:
     - name: kafka-listener-2-container
       image: python:3.9-slim
-      command: ["/bin/bash", "-c"]
+      command: ["/bin/bash"]
       args:
+        - "-c"
         - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
@@ -182,7 +167,6 @@ EOF
           echo "Consumer #2 done. Keeping container alive."
           tail -f /dev/null
   restartPolicy: Always
-
 ---
 apiVersion: v1
 kind: Service
