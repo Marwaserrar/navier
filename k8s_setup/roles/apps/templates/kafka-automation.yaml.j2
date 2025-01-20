@@ -1,53 +1,5 @@
-{% raw %}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: kafka-scripts-cm
-data:
-  simulation_parameters.py: |
-    {{ lookup('file', 'templates/simulation_parameters.py') }}
-
-  kafka_producer.py: |
-    {{ lookup('file', 'templates/kafka_producer.py') }}
-
-  kafka_consumer.py: |
-    {{ lookup('file', 'templates/kafka_consumer.py') }}
 ---
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kafka-cli
-  labels:
-    app: kafka-cli
-spec:
-  containers:
-    - name: kafka-cli-container
-      image: python:3.9-slim
-      command: ["/bin/bash"]
-      args:
-        - "-c"
-        - |
-          apt-get update && apt-get install -y gcc libatlas-base-dev &&
-          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          # Keep container alive for CLI usage
-          tail -f /dev/null
-  restartPolicy: Always
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: kafka-cli-svc
-spec:
-  selector:
-    app: kafka-cli
-  ports:
-    - name: kafka-cli-port
-      protocol: TCP
-      port: 8080
-      targetPort: 8080
-      nodePort: 30080
-  type: NodePort
----
+# Kafka Producer Pod
 apiVersion: v1
 kind: Pod
 metadata:
@@ -58,25 +10,82 @@ spec:
   containers:
     - name: kafka-producer-container
       image: python:3.9-slim
-      command: ["/bin/bash"]
+      command: ["/bin/bash","-c","--"]
       args:
-        - "-c"
-        - |
+        - >
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
+          mkdir -p /app &&
+          cd /app &&
           echo "Running producer..." &&
-          python /scripts/kafka_producer.py &&
+          python /app/kafka_producer.py &&
           echo "Producer done. Keeping container alive." &&
           tail -f /dev/null
       volumeMounts:
-        - name: scripts-volume
-          mountPath: /scripts
+        - name: producer-script-volume
+          mountPath: /app/kafka_producer.py
+          subPath: kafka_producer.py
   volumes:
-    - name: scripts-volume
+    - name: producer-script-volume
       configMap:
-        name: kafka-scripts-cm
+        name: kafka-producer-script
   restartPolicy: Always
+
 ---
+# Kafka Listener Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kafka-listener-1
+  labels:
+    app: kafka-listener-1
+spec:
+  containers:
+    - name: kafka-listener-1-container
+      image: python:3.9-slim
+      command: ["/bin/bash","-c","--"]
+      args:
+        - >
+          apt-get update && apt-get install -y gcc libatlas-base-dev &&
+          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
+          mkdir -p /app &&
+          cd /app &&
+          echo "Running consumer #1..." &&
+          python /app/kafka_consumer.py &&
+          echo "Consumer #1 done. Keeping container alive." &&
+          tail -f /dev/null
+      volumeMounts:
+        - name: consumer-script-volume
+          mountPath: /app/kafka_consumer.py
+          subPath: kafka_consumer.py
+  volumes:
+    - name: consumer-script-volume
+      configMap:
+        name: kafka-consumer-script
+  restartPolicy: Always
+
+---
+# Kafka CLI Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kafka-cli
+  labels:
+    app: kafka-cli
+spec:
+  containers:
+    - name: kafka-cli-container
+      image: python:3.9-slim
+      command: ["/bin/bash","-c","--"]
+      args:
+        - >
+          apt-get update && apt-get install -y gcc libatlas-base-dev &&
+          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
+          tail -f /dev/null
+  restartPolicy: Always
+
+---
+# Kafka Producer Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -91,36 +100,9 @@ spec:
       targetPort: 8080
       nodePort: 30081
   type: NodePort
+
 ---
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kafka-listener-1
-  labels:
-    app: kafka-listener-1
-spec:
-  containers:
-    - name: kafka-listener-1-container
-      image: python:3.9-slim
-      command: ["/bin/bash"]
-      args:
-        - "-c"
-        - |
-          apt-get update && apt-get install -y gcc libatlas-base-dev &&
-          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          echo "Running consumer #1..." &&
-          python /scripts/kafka_consumer.py &&
-          echo "Consumer #1 done. Keeping container alive." &&
-          tail -f /dev/null
-      volumeMounts:
-        - name: scripts-volume
-          mountPath: /scripts
-  volumes:
-    - name: scripts-volume
-      configMap:
-        name: kafka-scripts-cm
-  restartPolicy: Always
----
+# Kafka Listener 1 Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -135,48 +117,20 @@ spec:
       targetPort: 8080
       nodePort: 30082
   type: NodePort
+
 ---
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kafka-listener-2
-  labels:
-    app: kafka-listener-2
-spec:
-  containers:
-    - name: kafka-listener-2-container
-      image: python:3.9-slim
-      command: ["/bin/bash"]
-      args:
-        - "-c"
-        - |
-          apt-get update && apt-get install -y gcc libatlas-base-dev &&
-          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          echo "Running consumer #2..." &&
-          python /scripts/kafka_consumer.py &&
-          echo "Consumer #2 done. Keeping container alive." &&
-          tail -f /dev/null
-      volumeMounts:
-        - name: scripts-volume
-          mountPath: /scripts
-  volumes:
-    - name: scripts-volume
-      configMap:
-        name: kafka-scripts-cm
-  restartPolicy: Always
----
+# Kafka CLI Service
 apiVersion: v1
 kind: Service
 metadata:
-  name: kafka-listener-2-svc
+  name: kafka-cli-svc
 spec:
   selector:
-    app: kafka-listener-2
+    app: kafka-cli
   ports:
-    - name: listener2-port
+    - name: kafka-cli-port
       protocol: TCP
       port: 8080
       targetPort: 8080
-      nodePort: 30083
+      nodePort: 30080
   type: NodePort
-{% endraw %}
