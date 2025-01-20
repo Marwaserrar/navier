@@ -14,6 +14,3 @@
     src: kafka-automation.yaml.j2
     dest: /tmp/kafka-automation.yaml
 
-- name: Apply Kafka automation pods + services
-  ansible.builtin.shell: "kubectl apply -f /tmp/kafka-automation.yaml --kubeconfig=/home/asmae/.kube/config"
-  when: inventory_hostname in groups['control-plane']
