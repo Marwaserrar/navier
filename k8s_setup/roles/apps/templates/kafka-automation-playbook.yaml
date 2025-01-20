@@ -1,0 +1,34 @@
+---
+- name: Deploy Kafka Automation
+  hosts: control-plane
+  become: yes
+  tasks:
+    - name: Create ConfigMap for Kafka Consumer Script
+      k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: kafka-consumer-script
+          data:
+            kafka_consumer.py: "{{ lookup('file', 'templates/kafka_consumer.py') }}"
+
+    - name: Create ConfigMap for Kafka Producer Script
+      k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: kafka-producer-script
+          data:
+            kafka_producer.py: "{{ lookup('file', 'templates/kafka_producer.py') }}"
+
+    - name: Copy kafka-automation.yaml.j2 to remote host
+      ansible.builtin.template:
+        src: kafka-automation.yaml.j2
+        dest: /tmp/kafka-automation.yaml
+
+    - name: Apply Kafka automation pods + services
+      ansible.builtin.shell: "kubectl apply -f /tmp/kafka-automation.yaml --kubeconfig=/home/asmae/.kube/config"
