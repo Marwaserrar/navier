@@ -1,17 +1,4 @@
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: kafka-scripts
-data:
-  simulation_parameters.py: |
-    {{ lookup('file', 'templates/simulation_parameters.py') | indent(4) }}
-  kafka_producer.py: |
-    {{ lookup('file', 'templates/kafka_producer.py') | indent(4) }}
-  kafka_consumer.py: |
-    {{ lookup('file', 'templates/kafka_consumer.py') | indent(4) }}
-
----
 # ------------------------------------------------------------------------
 # Pod 1: kafka-cli (just a shell with Kafka+GCP dependencies)
 # ------------------------------------------------------------------------
@@ -22,6 +9,8 @@ metadata:
   labels:
     app: kafka-cli
 spec:
+  nodeSelector:
+    node-role.kubernetes.io/master: ""  # Ensure this pod runs on master
   containers:
     - name: kafka-cli-container
       image: python:3.9-slim
@@ -30,7 +19,6 @@ spec:
         - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          # Keep container alive for CLI usage
           tail -f /dev/null
   restartPolicy: Always
 
@@ -61,6 +49,8 @@ metadata:
   labels:
     app: kafka-producer
 spec:
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
   containers:
     - name: kafka-producer-container
       image: python:3.9-slim
@@ -70,7 +60,6 @@ spec:
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
           mkdir -p /app && cd /app &&
-          # Copy scripts from mounted ConfigMap
           cp /scripts/simulation_parameters.py . &&
           cp /scripts/kafka_producer.py . &&
           echo "Running producer..." &&
@@ -83,8 +72,8 @@ spec:
           readOnly: true
   volumes:
     - name: scripts-volume
-      configMap:
-        name: kafka-scripts
+      hostPath:
+        path: /home/asmae/kafka-scripts
   restartPolicy: Always
 
 ---
@@ -114,6 +103,8 @@ metadata:
   labels:
     app: kafka-listener-1
 spec:
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
   containers:
     - name: kafka-listener-1-container
       image: python:3.9-slim
@@ -123,7 +114,6 @@ spec:
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
           mkdir -p /app && cd /app &&
-          # Copy scripts from mounted ConfigMap
           cp /scripts/simulation_parameters.py . &&
           cp /scripts/kafka_consumer.py . &&
           echo "Running consumer #1..." &&
@@ -136,8 +126,8 @@ spec:
           readOnly: true
   volumes:
     - name: scripts-volume
-      configMap:
-        name: kafka-scripts
+      hostPath:
+        path: /home/asmae/kafka-scripts
   restartPolicy: Always
 
 ---
@@ -167,6 +157,8 @@ metadata:
   labels:
     app: kafka-listener-2
 spec:
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
   containers:
     - name: kafka-listener-2-container
       image: python:3.9-slim
@@ -176,7 +168,6 @@ spec:
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
           mkdir -p /app && cd /app &&
-          # Copy scripts from mounted ConfigMap
           cp /scripts/simulation_parameters.py . &&
           cp /scripts/kafka_consumer.py . &&
           echo "Running consumer #2..." &&
@@ -189,8 +180,8 @@ spec:
           readOnly: true
   volumes:
     - name: scripts-volume
-      configMap:
-        name: kafka-scripts
+      hostPath:
+        path: /home/asmae/kafka-scripts
   restartPolicy: Always
 
 ---
