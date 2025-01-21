@@ -5,11 +5,11 @@ metadata:
   name: kafka-scripts
 data:
   simulation_parameters.py: |
-    {{ lookup('file', 'templates/simulation_parameters.py') }}
+    {{ lookup('file', 'templates/simulation_parameters.py') | indent(4) }}
   kafka_producer.py: |
-    {{ lookup('file', 'templates/kafka_producer.py') }}
+    {{ lookup('file', 'templates/kafka_producer.py') | indent(4) }}
   kafka_consumer.py: |
-    {{ lookup('file', 'templates/kafka_consumer.py') }}
+    {{ lookup('file', 'templates/kafka_consumer.py') | indent(4) }}
 
 ---
 # ------------------------------------------------------------------------
