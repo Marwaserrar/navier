@@ -32,5 +32,5 @@
 
 - name: Apply Kafka automation YAML on control-plane
   ansible.builtin.shell: |
-    kubectl apply -f /tmp/kafka-automation.yaml --kubeconfig=/home/asmae/.kube/config
+    kubectl apply -f /tmp/kafka-automation.yaml 
   when: inventory_hostname in groups['control-plane']
