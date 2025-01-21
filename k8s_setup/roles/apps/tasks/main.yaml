@@ -4,6 +4,7 @@
 - name: integrate kafka
   import_tasks: kafka.yaml
   
+# Render the manifest locally on the control machine (GitHub runner)
 - name: Render kafka-automation.yaml locally
   ansible.builtin.template:
     src: kafka-automation.yaml.j2
@@ -11,9 +12,15 @@
   delegate_to: localhost
   run_once: true
 
-- name: Apply Kafka automation YAML locally
+# Copy the rendered manifest to the control-plane host
+- name: Copy rendered YAML to control-plane
+  ansible.builtin.copy:
+    src: /tmp/kafka-automation.yaml
+    dest: /tmp/kafka-automation.yaml
+  when: inventory_hostname in groups['control-plane']
+
+# Apply the manifest on the control-plane host using its kubeconfig
+- name: Apply Kafka automation YAML on control plane
   ansible.builtin.shell: |
     kubectl apply -f /tmp/kafka-automation.yaml --kubeconfig=/home/asmae/.kube/config
-  delegate_to: localhost
-  run_once: true
   when: inventory_hostname in groups['control-plane']
