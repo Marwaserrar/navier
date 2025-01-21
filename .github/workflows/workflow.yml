@@ -59,7 +59,7 @@ jobs:
 
       - name: Force release Terraform state lock
         run: |
-          terraform force-unlock 1737422040378762 || echo "No lock to release or already unlocked."
+          terraform force-unlock 1737422040378762 && echo "tried to force unlock"|| echo "No lock to release or already unlocked."    
         shell: bash
 
         
