@@ -60,12 +60,12 @@ spec:
 
           # Write 'simulation_parameters.py'
           cat << 'EOF' > simulation_parameters.py
-{{ lookup('file', 'templates/simulation_parameters.py') | indent(10) }}
+{{ lookup('file', 'templates/simulation_parameters.py') }}
 EOF
 
           # Write producer script
           cat << 'EOF' > kafka_producer.py
-{{ lookup('file', 'templates/kafka_producer.py') | indent(10) }}
+{{ lookup('file', 'templates/kafka_producer.py') }}
 EOF
 
           echo "Running producer..." &&
@@ -114,12 +114,12 @@ spec:
 
           # Write 'simulation_parameters.py'
           cat << 'EOF' > simulation_parameters.py
-{{ lookup('file', 'templates/simulation_parameters.py') | indent(10) }}
+{{ lookup('file', 'templates/simulation_parameters.py') }}
 EOF
 
           # Write consumer script
           cat << 'EOF' > kafka_consumer.py
-{{ lookup('file', 'templates/kafka_consumer.py') | indent(10) }}
+{{ lookup('file', 'templates/kafka_consumer.py') }}
 EOF
 
           echo "Running consumer #1..." &&
@@ -168,12 +168,12 @@ spec:
 
           # Write 'simulation_parameters.py'
           cat << 'EOF' > simulation_parameters.py
-{{ lookup('file', 'templates/simulation_parameters.py') | indent(10) }}
+{{ lookup('file', 'templates/simulation_parameters.py') }}
 EOF
 
           # Write consumer script
           cat << 'EOF' > kafka_consumer.py
-{{ lookup('file', 'templates/kafka_consumer.py') | indent(10) }}
+{{ lookup('file', 'templates/kafka_consumer.py') }}
 EOF
 
           echo "Running consumer #2..." &&
