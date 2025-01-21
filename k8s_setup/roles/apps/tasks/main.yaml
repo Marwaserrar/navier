@@ -23,7 +23,14 @@
   delegate_to: localhost
   run_once: true
 
-- name: Validate rendered YAML
+- name: Copy rendered YAML to control-plane
+  ansible.builtin.copy:
+    src: /tmp/kafka-automation.yaml
+    dest: /tmp/kafka-automation.yaml
+  when: inventory_hostname in groups['control-plane']
+
+
+- name: Apply Kafka automation YAML on control-plane
   ansible.builtin.shell: |
-    kubectl apply --dry-run=client -f /tmp/kafka-automation.yaml --kubeconfig=/home/asmae/.kube/config
+    kubectl apply -f /tmp/kafka-automation.yaml --kubeconfig=/home/asmae/.kube/config
   when: inventory_hostname in groups['control-plane']
