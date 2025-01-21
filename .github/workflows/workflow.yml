@@ -63,11 +63,7 @@ jobs:
       - name: Initialize Terraform
         run: terraform init -upgrade
         shell: bash
-  
-      - name: Force release Terraform state lock
-        run: |
-          terraform force-unlock 1737422040378762 && echo "Tried to force unlock" || echo "No lock to release or already unlocked."
-        shell: bash
+
   
       - name: Setup Ansible
         run: sudo apt-get update && sudo apt-get install -y ansible
