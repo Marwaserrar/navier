@@ -4,14 +4,16 @@
 - name: integrate kafka
   import_tasks: kafka.yaml
   
-- name: Copy kafka-automation.yaml.j2 to remote host
+- name: Render kafka-automation.yaml locally
   ansible.builtin.template:
     src: kafka-automation.yaml.j2
     dest: /tmp/kafka-automation.yaml
+  delegate_to: localhost
+  run_once: true
 
-# (Optional: remove duplicate copy task if unnecessary)
-
-- name: Apply Kafka automation YAML
+- name: Apply Kafka automation YAML locally
   ansible.builtin.shell: |
     kubectl apply -f /tmp/kafka-automation.yaml --kubeconfig=/home/asmae/.kube/config
+  delegate_to: localhost
+  run_once: true
   when: inventory_hostname in groups['control-plane']
