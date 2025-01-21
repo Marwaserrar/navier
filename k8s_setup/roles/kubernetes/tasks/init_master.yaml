@@ -50,14 +50,14 @@
   changed_when: kubeadm_init.rc == 0
   notify: Apply sysctl changes
 
-# - name: Set up kubeconfig for kubectl on control plane
-#   shell: |
-#     mkdir -p ~/.kube
-#     sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
-#     sudo chown $(id -u):$(id -g) ~/.kube/config
-#   args:
-#     executable: /bin/bash
-#   when: inventory_hostname in groups['control-plane']
+- name: Set up kubeconfig for kubectl on control plane
+  shell: |
+    mkdir -p ~/.kube
+    sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
+    sudo chown $(id -u):$(id -g) ~/.kube/config
+  args:
+    executable: /bin/bash
+  when: inventory_hostname in groups['control-plane']
 
 - name: Create .kube directory
   become: yes
@@ -82,6 +82,36 @@
     path: ~/.kube/config
   register: kubeconfig_status
   when: inventory_hostname in groups['control-plane']
+
+
+- name: Create directory for Kafka scripts on master
+  file:
+    path: /home/asmae/kafka-scripts
+    state: directory
+    mode: '0755'
+  when: inventory_hostname in groups['control-plane']
+
+- name: Copy simulation_parameters.py to master
+  copy:
+    src: templates/simulation_parameters.py
+    dest: /home/asmae/kafka-scripts/simulation_parameters.py
+    mode: '0644'
+  when: inventory_hostname in groups['control-plane']
+
+- name: Copy kafka_producer.py to master
+  copy:
+    src: templates/kafka_producer.py
+    dest: /home/asmae/kafka-scripts/kafka_producer.py
+    mode: '0644'
+  when: inventory_hostname in groups['control-plane']
+
+- name: Copy kafka_consumer.py to master
+  copy:
+    src: templates/kafka_consumer.py
+    dest: /home/asmae/kafka-scripts/kafka_consumer.py
+    mode: '0644'
+  when: inventory_hostname in groups['control-plane']
+
 
 # - name: Fail if kubeconfig is not set up correctly
 #   fail:
