@@ -8,9 +8,10 @@
   ansible.builtin.template:
     src: kafka-automation.yaml.j2
     dest: /tmp/kafka-automation.yaml
-    
-- name: Copy kafka-automation.yaml.j2 to remote host
-  ansible.builtin.template:
-    src: kafka-automation.yaml.j2
-    dest: /tmp/kafka-automation.yaml
 
+# (Optional: remove duplicate copy task if unnecessary)
+
+- name: Apply Kafka automation YAML
+  ansible.builtin.shell: |
+    kubectl apply -f /tmp/kafka-automation.yaml --kubeconfig=/home/asmae/.kube/config
+  when: inventory_hostname in groups['control-plane']
