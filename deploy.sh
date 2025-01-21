@@ -7,9 +7,8 @@ export GOOGLE_APPLICATION_CREDENTIALS='/tmp/key-file.json'
 echo "Starting Terraform apply..."
 cd terraform
 terraform init --upgrade
-terraform destroy --auto-approve
-terraform apply --auto-approve
-terraform force-unlock 1737422040378762 && echo "Tried to force unlock" || echo "No lock to release or already unlocked."
+terraform destroy --auto-approve -lock=false
+terraform apply --auto-approve 
 echo "Terraform apply completed."
 
 echo "Waiting for 60 seconds before starting Ansible playbook..."
