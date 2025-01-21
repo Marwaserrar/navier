@@ -1,3 +1,17 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-scripts
+data:
+  simulation_parameters.py: |
+    {{ lookup('file', 'templates/simulation_parameters.py') }}
+  kafka_producer.py: |
+    {{ lookup('file', 'templates/kafka_producer.py') }}
+  kafka_consumer.py: |
+    {{ lookup('file', 'templates/kafka_consumer.py') }}
+
+---
 # ------------------------------------------------------------------------
 # Pod 1: kafka-cli (just a shell with Kafka+GCP dependencies)
 # ------------------------------------------------------------------------
@@ -55,23 +69,22 @@ spec:
         - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          mkdir -p /app &&
-          cd /app &&
-
-          # Write 'simulation_parameters.py'
-          cat << 'EOF' > simulation_parameters.py
-{{ lookup('file', 'templates/simulation_parameters.py') }}
-EOF
-
-          # Write producer script
-          cat << 'EOF' > kafka_producer.py
-{{ lookup('file', 'templates/kafka_producer.py') }}
-EOF
-
+          mkdir -p /app && cd /app &&
+          # Copy scripts from mounted ConfigMap
+          cp /scripts/simulation_parameters.py . &&
+          cp /scripts/kafka_producer.py . &&
           echo "Running producer..." &&
           python kafka_producer.py &&
           echo "Producer done. Keeping container alive." &&
           tail -f /dev/null
+      volumeMounts:
+        - name: scripts-volume
+          mountPath: /scripts
+          readOnly: true
+  volumes:
+    - name: scripts-volume
+      configMap:
+        name: kafka-scripts
   restartPolicy: Always
 
 ---
@@ -109,23 +122,22 @@ spec:
         - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          mkdir -p /app &&
-          cd /app &&
-
-          # Write 'simulation_parameters.py'
-          cat << 'EOF' > simulation_parameters.py
-{{ lookup('file', 'templates/simulation_parameters.py') }}
-EOF
-
-          # Write consumer script
-          cat << 'EOF' > kafka_consumer.py
-{{ lookup('file', 'templates/kafka_consumer.py') }}
-EOF
-
+          mkdir -p /app && cd /app &&
+          # Copy scripts from mounted ConfigMap
+          cp /scripts/simulation_parameters.py . &&
+          cp /scripts/kafka_consumer.py . &&
           echo "Running consumer #1..." &&
           python kafka_consumer.py &&
           echo "Consumer #1 done. Keeping container alive." &&
           tail -f /dev/null
+      volumeMounts:
+        - name: scripts-volume
+          mountPath: /scripts
+          readOnly: true
+  volumes:
+    - name: scripts-volume
+      configMap:
+        name: kafka-scripts
   restartPolicy: Always
 
 ---
@@ -163,23 +175,22 @@ spec:
         - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          mkdir -p /app &&
-          cd /app &&
-
-          # Write 'simulation_parameters.py'
-          cat << 'EOF' > simulation_parameters.py
-{{ lookup('file', 'templates/simulation_parameters.py') }}
-EOF
-
-          # Write consumer script
-          cat << 'EOF' > kafka_consumer.py
-{{ lookup('file', 'templates/kafka_consumer.py') }}
-EOF
-
+          mkdir -p /app && cd /app &&
+          # Copy scripts from mounted ConfigMap
+          cp /scripts/simulation_parameters.py . &&
+          cp /scripts/kafka_consumer.py . &&
           echo "Running consumer #2..." &&
           python kafka_consumer.py &&
           echo "Consumer #2 done. Keeping container alive." &&
           tail -f /dev/null
+      volumeMounts:
+        - name: scripts-volume
+          mountPath: /scripts
+          readOnly: true
+  volumes:
+    - name: scripts-volume
+      configMap:
+        name: kafka-scripts
   restartPolicy: Always
 
 ---
