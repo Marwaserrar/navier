@@ -11,14 +11,19 @@
   delegate_to: localhost
   run_once: true
 
-- name: Log first 20 lines of the rendered YAML
-  ansible.builtin.shell: "head -n 20 /tmp/kafka-automation.yaml"
+- name: Log first 100 lines of the rendered YAML
+  ansible.builtin.shell: "head -n 100 /tmp/kafka-automation.yaml"
   delegate_to: localhost
   run_once: true
-  register: rendered_yaml_head
+  register: rendered_yaml_head_extended
 
-- name: Display rendered YAML head
+- name: Display extended rendered YAML head
   ansible.builtin.debug:
-    msg: "{{ rendered_yaml_head.stdout }}"
+    msg: "{{ rendered_yaml_head_extended.stdout }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Validate rendered YAML
+  ansible.builtin.shell: "kubectl apply --dry-run=client -f /tmp/kafka-automation.yaml --kubeconfig=/home/asmae/.kube/config"
   delegate_to: localhost
   run_once: true
