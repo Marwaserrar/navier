@@ -49,56 +49,51 @@ jobs:
           git add app/manifests/
           git diff --quiet && git diff --staged --quiet || (git commit -m "Update image version to ${{ github.run_number }}" && git push)
 
-  cluster_setup:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+cluster_setup:
+  runs-on: ubuntu-latest
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.0
 
+    - name: Initialize Terraform
+      run: terraform init -upgrade
+      shell: bash
 
-      - name: Force release Terraform state lock
-        run: |
-          terraform force-unlock 1737422040378762 && echo "tried to force unlock"|| echo "No lock to release or already unlocked."    
-        shell: bash
+    - name: Force release Terraform state lock
+      run: |
+        terraform force-unlock 1737422040378762 && echo "Tried to force unlock" || echo "No lock to release or already unlocked."
+      shell: bash
 
-        
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.0
+    - name: Setup Ansible
+      run: sudo apt-get update && sudo apt-get install -y ansible
 
+    - name: Add SSH Private Key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_SECRET }}" > ~/.ssh/gcp_key
+        chmod 600 ~/.ssh/gcp_key
+      shell: bash
 
+    - name: Authenticate with Google Cloud
+      run: |
+        echo "${{ secrets.GCP_CRED }}" | base64 --decode > /tmp/key-file.json
+      shell: bash
 
+    - name: Add SSH Public Key
+      run: |
+        mkdir -p /tmp/.ssh
+        echo "${{ secrets.TF_PUB }}" > /tmp/.ssh/gcp_key.pub
+        chmod 644 /tmp/.ssh/gcp_key.pub
+      shell: bash
 
-      - name: Setup Ansible
-        run: sudo apt-get update && sudo apt-get install -y ansible
-
-
-
-
-      - name: Add SSH Private Key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_SECRET }}" > ~/.ssh/gcp_key
-          chmod 600 ~/.ssh/gcp_key
-        shell: bash
-
-      - name: Authenticate with Google Cloud
-        run: |
-          echo "${{ secrets.GCP_CRED }}" | base64 --decode > /tmp/key-file.json
-        shell: bash
-
-      - name: Add SSH Public Key
-        run: |
-          mkdir -p /tmp/.ssh
-          echo "${{ secrets.TF_PUB }}" > /tmp/.ssh/gcp_key.pub
-          chmod 644 /tmp/.ssh/gcp_key.pub
-        shell: bash
-
-      - name: set it up
-        run: |
-          pwd
-          chmod +x ./deploy.sh
-          ./deploy.sh
-        shell: bash
+    - name: set it up
+      run: |
+        pwd
+        chmod +x ./deploy.sh
+        ./deploy.sh
+      shell: bash
