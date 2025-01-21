@@ -55,19 +55,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.0
-
-      - name: Setup Ansible
-        run: sudo apt-get update && sudo apt-get install -y ansible
 
 
       - name: Force release Terraform state lock
         run: |
           terraform force-unlock 1737422040378762 || echo "No lock to release or already unlocked."
         shell: bash
+
+        
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+
+
+
+      - name: Setup Ansible
+        run: sudo apt-get update && sudo apt-get install -y ansible
+
+
+
 
       - name: Add SSH Private Key
         run: |
