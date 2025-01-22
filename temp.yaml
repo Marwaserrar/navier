@@ -82,6 +82,8 @@
     path: ~/.kube/config
   register: kubeconfig_status
   when: inventory_hostname in groups['control-plane']
+
+
 - name: Verify GCP credentials file exists
   stat:
     path: /tmp/key-file.json

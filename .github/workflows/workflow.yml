@@ -76,6 +76,32 @@ jobs:
           echo "${{ secrets.GCP_CRED }}" | base64 --decode > /tmp/key-file.json
         shell: bash
 
+      - name: Add SSH Public Key
+        run: |
+          mkdir -p /tmp/.ssh
+          echo "${{ secrets.TF_PUB }}" > /tmp/.ssh/gcp_key.pub
+          chmod 644 /tmp/.ssh/gcp_key.pub
+        shell: bash
+
+        
+      - name: Check if file exists
+        run: |
+          FILE=/tmp/key-file.json
+          if [ -f "$FILE" ]; then
+            echo "File $FILE exists."
+          else
+            echo "File $FILE does not exist."
+          fi
+
+          DIRECTORY=~/.ssh
+          if [ -d "$DIRECTORY" ]; then
+            echo "Directory $DIRECTORY exists."
+          else
+            echo "Directory $DIRECTORY does not exist."
+          fi
+        shell: bash
+
+
       - name: Upload GCP credentials as artifact
         uses: actions/upload-artifact@v3
         with:
@@ -86,14 +112,31 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: gcp-credentials
-          path: /tmp/
 
-      - name: Add SSH Public Key
+      - name: Verify downloaded file
         run: |
-          mkdir -p /tmp/.ssh
-          echo "${{ secrets.TF_PUB }}" > /tmp/.ssh/gcp_key.pub
-          chmod 644 /tmp/.ssh/gcp_key.pub
+          if [ -f "/tmp/key-file.json" ]; then
+            echo "GCP credentials available for Ansible."
+          else
+            echo "Error: GCP credentials not available for Ansible."
+            exit 1
+          fi
         shell: bash
+
+
+      - name: Test file existence
+        hosts: localhost
+        tasks:
+          - name: Check if file exists
+            stat:
+              path: /tmp/key-file.json
+            register: file_status
+
+          - name: Print file status
+            debug:
+              msg: "{{ '/tmp/key-file.json exists' if file_status.stat.exists else '/tmp/key-file.json does not exist' }}"
+
+
 
       - name: set it up
         run: |
