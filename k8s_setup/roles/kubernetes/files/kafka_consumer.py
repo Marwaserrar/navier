@@ -31,16 +31,14 @@ logging.basicConfig(
 ##############################################################################
 # 1. Decode GCP credentials from environment variable (base64, no file I/O)  #
 ##############################################################################
-gcp_creds_base64 = args.gcp_cred or os.environ.get("GCP_CRED")
-GCP_CREDENTIALS = None
-
-if gcp_creds_base64:
+gcp_creds_raw = args.gcp_cred or os.environ.get("GCP_CRED")
+if gcp_creds_raw:
     try:
-        creds_json = json.loads(base64.b64decode(gcp_creds_base64).decode("utf-8"))
+        creds_json = json.loads(gcp_creds_raw)
         GCP_CREDENTIALS = service_account.Credentials.from_service_account_info(creds_json)
-        logging.info("Loaded GCP credentials from base64 env variable 'GCP_CRED'.")
+        logging.info("Loaded GCP credentials from raw JSON.")
     except Exception as e:
-        logging.error(f"Failed to decode or parse GCP_CRED: {e}")
+        logging.error(f"Failed to parse GCP_CRED: {e}")
 else:
     logging.warning("No GCP_CRED found. GCP upload may fail if credentials are required.")
 
