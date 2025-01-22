@@ -3,17 +3,18 @@
   become_user: asmae
   command: kubeadm token create --print-join-command
   register: join_command
+  delegate_to: "{{ groups['control-plane'][0] }}"
   run_once: true
-  when: inventory_hostname in groups['control-plane']
 
 - name: Debug join command
   debug:
     var: join_command
-  when: inventory_hostname in groups['control-plane']
+  run_once: true
+  delegate_to: "{{ groups['control-plane'][0] }}"
 
 - name: Save join command for worker nodes
   copy:
-    content: "{{ hostvars[groups['control-plane'][0]]['join_command']['stdout'] }}"
+    content: "{{ hostvars[groups['control-plane'][0]].join_command.stdout }}"
     dest: /tmp/join-command.sh
     mode: '0755'
   when: inventory_hostname in groups['workers']
