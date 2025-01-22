@@ -77,17 +77,13 @@
   when: inventory_hostname in groups['control-plane']
 
 
+
 - name: Verify kubeconfig setup
   stat:
     path: ~/.kube/config
   register: kubeconfig_status
   when: inventory_hostname in groups['control-plane']
-- name: Verify GCP credentials file exists
-  stat:
-    path: /tmp/key-file.json
-  register: gcp_cred_file
-  when: inventory_hostname in groups['control-plane']
-  ignore_errors: yes  # Ignore errors if the file is missing
+# Ignore errors if the file is missing
 
 
 - name: Copy key-file.json to master node
@@ -95,6 +91,14 @@
     src: /tmp/key-file.json
     dest: /tmp/key-file.json
   when: inventory_hostname in groups['control-plane']
+
+
+- name: Verify GCP credentials file exists
+  stat:
+    path: /tmp/key-file.json
+  register: gcp_cred_file
+  when: inventory_hostname in groups['control-plane']
+  ignore_errors: yes  
 
 
 - name: Fail if GCP credentials file is missing
