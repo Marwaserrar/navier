@@ -10,7 +10,7 @@ metadata:
     app: kafka-cli
 spec:
   nodeSelector:
-    node-role.kubernetes.io/master: ""  # Ensure this pod runs on master
+    node-role.kubernetes.io/control-plane: ""  # Use control-plane label for master
   tolerations:
     - key: "node-role.kubernetes.io/control-plane"
       operator: "Exists"
@@ -54,7 +54,7 @@ metadata:
     app: kafka-producer
 spec:
   nodeSelector:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
   tolerations:
     - key: "node-role.kubernetes.io/control-plane"
       operator: "Exists"
@@ -112,7 +112,7 @@ metadata:
     app: kafka-listener-1
 spec:
   nodeSelector:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
   tolerations:
     - key: "node-role.kubernetes.io/control-plane"
       operator: "Exists"
@@ -170,7 +170,7 @@ metadata:
     app: kafka-listener-2
 spec:
   nodeSelector:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
   tolerations:
     - key: "node-role.kubernetes.io/control-plane"
       operator: "Exists"
@@ -214,4 +214,4 @@ spec:
       port: 8080
       targetPort: 8080
       nodePort: 30083
-  type: NodePort 
+  type: NodePort
