@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import base64
 import json
 import logging
 import numpy as np
@@ -16,26 +15,29 @@ from simulation_parameters import SimulationParameters
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,  # Set to DEBUG for more granular logs
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler()]
 )
 
 ##############################################################################
-# 1. Decode GCP credentials from environment variable (base64, no file I/O)  #
+# 1. Load GCP credentials from the mounted JSON file
 ##############################################################################
-gcp_creds_base64 = os.environ.get("GCP_CRED")
 GCP_CREDENTIALS = None
+GCP_CRED_PATH = "/secrets/gcp_cred.json"  # Path to the mounted JSON key file
 
-if gcp_creds_base64:
-    try:
-        creds_json = json.loads(base64.b64decode(gcp_creds_base64).decode("utf-8"))
+try:
+    logging.debug(f"Attempting to load GCP credentials from {GCP_CRED_PATH}.")
+    with open(GCP_CRED_PATH, "r") as f:
+        creds_json = json.load(f)
         GCP_CREDENTIALS = service_account.Credentials.from_service_account_info(creds_json)
-        logging.info("Loaded GCP credentials from base64 env variable 'GCP_CRED'.")
-    except Exception as e:
-        logging.error(f"Failed to decode or parse GCP_CRED: {e}")
-else:
-    logging.warning("No GCP_CRED found. GCP upload may fail if credentials are required.")
+        logging.info("Successfully loaded GCP credentials from mounted JSON file.")
+except FileNotFoundError:
+    logging.error(f"GCP credentials file not found at {GCP_CRED_PATH}.")
+except json.JSONDecodeError:
+    logging.error(f"Invalid JSON format in GCP credentials file at {GCP_CRED_PATH}.")
+except Exception as e:
+    logging.error(f"Failed to load GCP credentials: {e}")
 
 ##############################################################################
 # 2. Kafka and GCP Settings
@@ -51,22 +53,33 @@ BUCKET_NAME = "state-sdtd-1"
 # Ensure the results directory exists
 RESULTS_DIR = "/tmp/simulation_results"
 os.makedirs(RESULTS_DIR, exist_ok=True)
+logging.debug(f"Ensured that results directory '{RESULTS_DIR}' exists.")
 
 ##############################################################################
 # 3. GCP Upload Function (Uses in-memory credentials)
 ##############################################################################
 def upload_to_gcp(bucket_name, source_file_name, destination_blob_name):
     """Uploads a file to a GCP bucket using in-memory credentials."""
+    logging.info(f"Attempting to upload '{source_file_name}' to bucket '{bucket_name}' as '{destination_blob_name}'.")
+
     if not GCP_CREDENTIALS:
         logging.error("No GCP credentials available; skipping upload.")
         return
 
-    client = storage.Client(credentials=GCP_CREDENTIALS)
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(destination_blob_name)
-    blob.upload_from_filename(source_file_name)
-    logging.info(f"File {source_file_name} uploaded to {destination_blob_name}.")
+    try:
+        client = storage.Client(credentials=GCP_CREDENTIALS)
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(destination_blob_name)
+        blob.upload_from_filename(source_file_name)
+        logging.info(f"Successfully uploaded '{source_file_name}' to '{destination_blob_name}' in bucket '{bucket_name}'.")
 
+        # Verify upload by listing the blob
+        if blob.exists():
+            logging.info(f"Verified that '{destination_blob_name}' exists in bucket '{bucket_name}'.")
+        else:
+            logging.error(f"Uploaded blob '{destination_blob_name}' does not exist in bucket '{bucket_name}'.")
+    except Exception as e:
+        logging.error(f"Failed to upload '{source_file_name}' to GCP: {e}")
 
 ##############################################################################
 # 4. Numerical Methods
@@ -232,6 +245,13 @@ def run_navier_stokes_solver(sim_params: SimulationParameters):
         logging.info(f"Generated initial/final states plot in '{plot_filename}'")
         plt.close(fig)
 
+        # Upload plot to GCP
+        upload_to_gcp(
+            bucket_name=BUCKET_NAME,
+            source_file_name=plot_filename,
+            destination_blob_name=f"simulation_results/simulation_plot_{timestamp}.png",
+        )
+
     if do_gif:
         import matplotlib.pyplot as plt
         from matplotlib.animation import FuncAnimation
@@ -259,12 +279,12 @@ def run_navier_stokes_solver(sim_params: SimulationParameters):
         logging.info(f"Generated GIF animation in '{gif_filename}'")
         plt.close(fig)
 
-    # Upload final PNG to GCP (in-memory credentials)
-    upload_to_gcp(
-        bucket_name=BUCKET_NAME,
-        source_file_name=plot_filename,
-        destination_blob_name=f"simulation_results/simulation_plot_{timestamp}.png",
-    )
+        # Upload GIF to GCP
+        upload_to_gcp(
+            bucket_name=BUCKET_NAME,
+            source_file_name=gif_filename,
+            destination_blob_name=f"simulation_results/simulation_animation_{timestamp}.gif",
+        )
 
     logging.info("End of simulation.")
 
