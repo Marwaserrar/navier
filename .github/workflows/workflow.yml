@@ -87,15 +87,6 @@ jobs:
           chmod 644 /tmp/.ssh/gcp_key.pub
         shell: bash
 
-      - name: Export GCP_CRED
-        run: echo "GCP_CRED=${{ secrets.GCP_CRED }}" >> $GITHUB_ENV
-
-      - name: Create Kubernetes Secret for GCP Credentials
-        run: |
-          echo "${{ secrets.GCP_CRED }}" > /tmp/gcp_cred_base64.txt
-          kubectl create secret generic gcp-cred-secret --from-literal=gcp_cred.json="$(cat /tmp/gcp_cred_base64.txt)"
-        shell: bash
-
       - name: set it up
         run: |
           pwd

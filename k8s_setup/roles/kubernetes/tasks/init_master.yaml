@@ -50,14 +50,14 @@
   changed_when: kubeadm_init.rc == 0
   notify: Apply sysctl changes
 
-#- name: Set up kubeconfig for kubectl on control plane
-#  shell: |
-#    mkdir -p ~/.kube
-#    sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
-#    sudo chown $(id -u):$(id -g) ~/.kube/config
-#  args:
-#    executable: /bin/bash
-#  when: inventory_hostname in groups['control-plane']
+- name: Set up kubeconfig for kubectl on control plane
+  shell: |
+    mkdir -p ~/.kube
+    sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
+    sudo chown $(id -u):$(id -g) ~/.kube/config
+  args:
+    executable: /bin/bash
+  when: inventory_hostname in groups['control-plane']
 
 - name: Create .kube directory
   become: yes
@@ -81,6 +81,12 @@
   stat:
     path: ~/.kube/config
   register: kubeconfig_status
+  when: inventory_hostname in groups['control-plane']
+
+- name: Create Kubernetes secret for GCP credentials
+  command: >
+    kubectl create secret generic gcp-cred-secret
+    --from-file=gcp_cred.json=/tmp/key-file.json
   when: inventory_hostname in groups['control-plane']
 
 
