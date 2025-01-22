@@ -86,6 +86,9 @@ jobs:
           echo "${{ secrets.TF_PUB }}" > /tmp/.ssh/gcp_key.pub
           chmod 644 /tmp/.ssh/gcp_key.pub
         shell: bash
+
+      - name: Export GCP_CRED
+        run: echo "GCP_CRED=${{ secrets.GCP_CRED }}" >> $GITHUB_ENV
   
       - name: set it up
         run: |
