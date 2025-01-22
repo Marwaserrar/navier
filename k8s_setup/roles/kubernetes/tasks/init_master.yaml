@@ -50,14 +50,14 @@
   changed_when: kubeadm_init.rc == 0
   notify: Apply sysctl changes
 
-- name: Set up kubeconfig for kubectl on control plane
-  shell: |
-    mkdir -p ~/.kube
-    sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
-    sudo chown $(id -u):$(id -g) ~/.kube/config
-  args:
-    executable: /bin/bash
-  when: inventory_hostname in groups['control-plane']
+# - name: Set up kubeconfig for kubectl on control plane
+#   shell: |
+#     mkdir -p ~/.kube
+#     sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
+#     sudo chown $(id -u):$(id -g) ~/.kube/config
+#   args:
+#     executable: /bin/bash
+#   when: inventory_hostname in groups['control-plane']
 
 - name: Create .kube directory
   become: yes
@@ -67,14 +67,14 @@
     state: directory
     mode: 0755
 
-#- name: Copy admin.conf to User's kube config
-#  become: yes
-#  copy:
-#      src: /etc/kubernetes/admin.conf
-#      dest: /home/asmae/.kube/config
-#      remote_src: yes
-#      owner: asmae
-#  when: inventory_hostname in groups['control-plane']
+- name: Copy admin.conf to User's kube config
+  become: yes
+  copy:
+      src: /etc/kubernetes/admin.conf
+      dest: /home/asmae/.kube/config
+      remote_src: yes
+      owner: asmae
+  when: inventory_hostname in groups['control-plane']
 
 
 - name: Verify kubeconfig setup
@@ -83,12 +83,23 @@
   register: kubeconfig_status
   when: inventory_hostname in groups['control-plane']
 
+
+- name: Verify GCP credentials file exists
+  stat:
+    path: /tmp/key-file.json
+  register: gcp_cred_file
+  when: inventory_hostname in groups['control-plane']
+
+- name: Fail if GCP credentials file is missing
+  fail:
+    msg: "GCP credentials file (/tmp/key-file.json) is missing."
+  when: not gcp_cred_file.stat.exists
+
 - name: Create Kubernetes secret for GCP credentials
   command: >
     kubectl create secret generic gcp-cred-secret
     --from-file=gcp_cred.json=/tmp/key-file.json
   when: inventory_hostname in groups['control-plane']
-
 
 - name: Create directory for Kafka scripts on master
   file:
@@ -117,7 +128,6 @@
     dest: /home/asmae/kafka-scripts/kafka_consumer.py
     mode: '0644'
   when: inventory_hostname in groups['control-plane']
-
 
 # - name: Fail if kubeconfig is not set up correctly
 #   fail:
