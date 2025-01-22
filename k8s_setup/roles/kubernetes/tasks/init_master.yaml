@@ -89,11 +89,14 @@
     path: /tmp/key-file.json
   register: gcp_cred_file
   when: inventory_hostname in groups['control-plane']
+  ignore_errors: yes  # Ignore errors if the file is missing
 
 - name: Fail if GCP credentials file is missing
   fail:
     msg: "GCP credentials file (/tmp/key-file.json) is missing."
-  when: not gcp_cred_file.stat.exists
+  when:
+    - inventory_hostname in groups['control-plane']
+    - not gcp_cred_file.stat.exists | default(false)  # Handle missing stat attribute
 
 - name: Create Kubernetes secret for GCP credentials
   command: >
