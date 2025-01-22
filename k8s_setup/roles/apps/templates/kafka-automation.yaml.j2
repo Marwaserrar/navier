@@ -70,10 +70,13 @@ spec:
           mkdir -p /app && cd /app &&
           cp /scripts/simulation_parameters.py . &&
           cp /scripts/kafka_producer.py . &&
-          echo "Running producer..." &&
-          python kafka_producer.py &&
-          echo "Producer done. Keeping container alive." &&
-          tail -f /dev/null
+          echo "Starting producer loop..." &&
+          while true; do
+            echo "Running producer..."
+            python kafka_producer.py
+            echo "Sleeping for 30 seconds..."
+            sleep 30
+          done
       volumeMounts:
         - name: scripts-volume
           mountPath: /scripts
