@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import base64
 import json
 import logging
 import numpy as np
@@ -32,9 +31,13 @@ try:
     with open(GCP_CRED_PATH, "r") as f:
         creds_json = json.load(f)
         GCP_CREDENTIALS = service_account.Credentials.from_service_account_info(creds_json)
-        logging.info("Loaded GCP credentials from mounted JSON file.")
+        logging.info("Successfully loaded GCP credentials from mounted JSON file.")
+except FileNotFoundError:
+    logging.error(f"GCP credentials file not found at {GCP_CRED_PATH}.")
+except json.JSONDecodeError:
+    logging.error(f"Invalid JSON format in GCP credentials file at {GCP_CRED_PATH}.")
 except Exception as e:
-    logging.error(f"Failed to load GCP credentials from {GCP_CRED_PATH}: {e}")
+    logging.error(f"Failed to load GCP credentials: {e}")
 
 ##############################################################################
 # 2. Kafka and GCP Settings
@@ -77,6 +80,7 @@ def upload_to_gcp(bucket_name, source_file_name, destination_blob_name):
             logging.error(f"Uploaded blob '{destination_blob_name}' does not exist in bucket '{bucket_name}'.")
     except Exception as e:
         logging.error(f"Failed to upload '{source_file_name}' to GCP: {e}")
+
 ##############################################################################
 # 4. Numerical Methods
 ##############################################################################
@@ -241,6 +245,13 @@ def run_navier_stokes_solver(sim_params: SimulationParameters):
         logging.info(f"Generated initial/final states plot in '{plot_filename}'")
         plt.close(fig)
 
+        # Upload plot to GCP
+        upload_to_gcp(
+            bucket_name=BUCKET_NAME,
+            source_file_name=plot_filename,
+            destination_blob_name=f"simulation_results/simulation_plot_{timestamp}.png",
+        )
+
     if do_gif:
         import matplotlib.pyplot as plt
         from matplotlib.animation import FuncAnimation
@@ -268,12 +279,12 @@ def run_navier_stokes_solver(sim_params: SimulationParameters):
         logging.info(f"Generated GIF animation in '{gif_filename}'")
         plt.close(fig)
 
-    # Upload final PNG to GCP (in-memory credentials)
-    upload_to_gcp(
-        bucket_name=BUCKET_NAME,
-        source_file_name=plot_filename,
-        destination_blob_name=f"simulation_results/simulation_plot_{timestamp}.png",
-    )
+        # Upload GIF to GCP
+        upload_to_gcp(
+            bucket_name=BUCKET_NAME,
+            source_file_name=gif_filename,
+            destination_blob_name=f"simulation_results/simulation_animation_{timestamp}.gif",
+        )
 
     logging.info("End of simulation.")
 
