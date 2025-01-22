@@ -132,7 +132,7 @@ spec:
           cp /scripts/simulation_parameters.py . &&
           cp /scripts/kafka_consumer.py . &&
           echo "Running consumer #1..." &&
-          python kafka_consumer.py &&
+          python kafka_consumer.py --gcp-cred "{{ lookup('env','GCP_CRED') }}" &&
           echo "Consumer #1 done. Keeping container alive." &&
           tail -f /dev/null
       volumeMounts:
@@ -190,7 +190,7 @@ spec:
           cp /scripts/simulation_parameters.py . &&
           cp /scripts/kafka_consumer.py . &&
           echo "Running consumer #2..." &&
-          python kafka_consumer.py &&
+          python kafka_consumer.py --gcp-cred "{{ lookup('env','GCP_CRED') }}" &&
           echo "Consumer #2 done. Keeping container alive." &&
           tail -f /dev/null
       volumeMounts:

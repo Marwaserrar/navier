@@ -14,6 +14,13 @@ from datetime import datetime
 
 from simulation_parameters import SimulationParameters
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--gcp-cred", help="Base64 encoded GCP credentials")
+args = parser.parse_args()
+
+
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -24,7 +31,7 @@ logging.basicConfig(
 ##############################################################################
 # 1. Decode GCP credentials from environment variable (base64, no file I/O)  #
 ##############################################################################
-gcp_creds_base64 = os.environ.get("GCP_CRED")
+gcp_creds_base64 = args.gcp_cred or os.environ.get("GCP_CRED")
 GCP_CREDENTIALS = None
 
 if gcp_creds_base64:
