@@ -14,11 +14,6 @@ from datetime import datetime
 
 from simulation_parameters import SimulationParameters
 
-# Parse command-line arguments
-parser = argparse.ArgumentParser()
-parser.add_argument("--gcp-cred", help="Raw JSON GCP credentials")
-args = parser.parse_args()
-
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,  # Set to DEBUG for more granular logs
@@ -27,21 +22,19 @@ logging.basicConfig(
 )
 
 ##############################################################################
-# 1. Decode GCP credentials from environment variable (raw JSON, no base64)
+# 1. Load GCP credentials from the mounted JSON file
 ##############################################################################
-gcp_creds_raw = args.gcp_cred or os.environ.get("GCP_CRED")
 GCP_CREDENTIALS = None
+GCP_CRED_PATH = "/secrets/gcp_cred.json"  # Path to the mounted JSON key file
 
-if gcp_creds_raw:
-    try:
-        logging.debug("Attempting to parse GCP_CRED.")
-        creds_json = json.loads(gcp_creds_raw)
+try:
+    logging.debug(f"Attempting to load GCP credentials from {GCP_CRED_PATH}.")
+    with open(GCP_CRED_PATH, "r") as f:
+        creds_json = json.load(f)
         GCP_CREDENTIALS = service_account.Credentials.from_service_account_info(creds_json)
-        logging.info("Loaded GCP credentials from raw JSON.")
-    except Exception as e:
-        logging.error(f"Failed to parse GCP_CRED: {e}")
-else:
-    logging.warning("No GCP_CRED found. GCP upload may fail if credentials are required.")
+        logging.info("Loaded GCP credentials from mounted JSON file.")
+except Exception as e:
+    logging.error(f"Failed to load GCP credentials from {GCP_CRED_PATH}: {e}")
 
 ##############################################################################
 # 2. Kafka and GCP Settings

@@ -123,12 +123,6 @@ spec:
   containers:
     - name: kafka-listener-1-container
       image: python:3.9-slim
-      env:
-        - name: GCP_CRED
-          valueFrom:
-            secretKeyRef:
-              name: gcp-cred-secret
-              key: gcp_cred.json
       command: ["/bin/bash", "-c"]
       args:
         - |
@@ -138,17 +132,26 @@ spec:
           cp /scripts/simulation_parameters.py . &&
           cp /scripts/kafka_consumer.py . &&
           echo "Running consumer #1..." &&
-          python kafka_consumer.py --gcp-cred "$GCP_CRED" &&
+          python kafka_consumer.py &&
           echo "Consumer #1 done. Keeping container alive." &&
           tail -f /dev/null
       volumeMounts:
         - name: scripts-volume
           mountPath: /scripts
           readOnly: true
+        - name: gcp-cred-volume
+          mountPath: /secrets
+          readOnly: true
   volumes:
     - name: scripts-volume
       hostPath:
         path: /home/asmae/kafka-scripts
+    - name: gcp-cred-volume
+      secret:
+        secretName: gcp-cred-secret
+        items:
+          - key: gcp_cred.json
+            path: gcp_cred.json
   restartPolicy: Always
 
 ---
@@ -187,12 +190,6 @@ spec:
   containers:
     - name: kafka-listener-2-container
       image: python:3.9-slim
-      env:
-        - name: GCP_CRED
-          valueFrom:
-            secretKeyRef:
-              name: gcp-cred-secret
-              key: gcp_cred.json
       command: ["/bin/bash", "-c"]
       args:
         - |
@@ -202,19 +199,27 @@ spec:
           cp /scripts/simulation_parameters.py . &&
           cp /scripts/kafka_consumer.py . &&
           echo "Running consumer #2..." &&
-          python kafka_consumer.py --gcp-cred "$GCP_CRED" &&
+          python kafka_consumer.py &&
           echo "Consumer #2 done. Keeping container alive." &&
           tail -f /dev/null
       volumeMounts:
         - name: scripts-volume
           mountPath: /scripts
           readOnly: true
+        - name: gcp-cred-volume
+          mountPath: /secrets
+          readOnly: true
   volumes:
     - name: scripts-volume
       hostPath:
         path: /home/asmae/kafka-scripts
+    - name: gcp-cred-volume
+      secret:
+        secretName: gcp-cred-secret
+        items:
+          - key: gcp_cred.json
+            path: gcp_cred.json
   restartPolicy: Always
-
 ---
 apiVersion: v1
 kind: Service
