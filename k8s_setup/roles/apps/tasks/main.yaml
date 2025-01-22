@@ -29,8 +29,7 @@
     dest: /tmp/kafka-automation.yaml
   when: inventory_hostname in groups['control-plane']
 
-
 - name: Apply Kafka automation YAML on control-plane
   ansible.builtin.shell: |
-    kubectl apply -f /tmp/kafka-automation.yaml 
+    kubectl apply -f /tmp/kafka-automation.yaml
   when: inventory_hostname in groups['control-plane']
