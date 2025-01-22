@@ -11,6 +11,10 @@ metadata:
 spec:
   nodeSelector:
     node-role.kubernetes.io/master: ""  # Ensure this pod runs on master
+  tolerations:
+    - key: "node-role.kubernetes.io/control-plane"
+      operator: "Exists"
+      effect: "NoSchedule"
   containers:
     - name: kafka-cli-container
       image: python:3.9-slim
@@ -51,6 +55,10 @@ metadata:
 spec:
   nodeSelector:
     node-role.kubernetes.io/master: ""
+  tolerations:
+    - key: "node-role.kubernetes.io/control-plane"
+      operator: "Exists"
+      effect: "NoSchedule"
   containers:
     - name: kafka-producer-container
       image: python:3.9-slim
@@ -105,6 +113,10 @@ metadata:
 spec:
   nodeSelector:
     node-role.kubernetes.io/master: ""
+  tolerations:
+    - key: "node-role.kubernetes.io/control-plane"
+      operator: "Exists"
+      effect: "NoSchedule"
   containers:
     - name: kafka-listener-1-container
       image: python:3.9-slim
@@ -159,6 +171,10 @@ metadata:
 spec:
   nodeSelector:
     node-role.kubernetes.io/master: ""
+  tolerations:
+    - key: "node-role.kubernetes.io/control-plane"
+      operator: "Exists"
+      effect: "NoSchedule"
   containers:
     - name: kafka-listener-2-container
       image: python:3.9-slim
@@ -198,4 +214,4 @@ spec:
       port: 8080
       targetPort: 8080
       nodePort: 30083
-  type: NodePort
+  type: NodePort 
