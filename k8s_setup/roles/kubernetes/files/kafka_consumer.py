@@ -14,26 +14,27 @@ from datetime import datetime
 
 from simulation_parameters import SimulationParameters
 
-
+# Parse command-line arguments
 parser = argparse.ArgumentParser()
-parser.add_argument("--gcp-cred", help="Base64 encoded GCP credentials")
+parser.add_argument("--gcp-cred", help="Raw JSON GCP credentials")
 args = parser.parse_args()
-
-
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,  # Set to DEBUG for more granular logs
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler()]
 )
 
 ##############################################################################
-# 1. Decode GCP credentials from environment variable (base64, no file I/O)  #
+# 1. Decode GCP credentials from environment variable (raw JSON, no base64)
 ##############################################################################
 gcp_creds_raw = args.gcp_cred or os.environ.get("GCP_CRED")
+GCP_CREDENTIALS = None
+
 if gcp_creds_raw:
     try:
+        logging.debug("Attempting to parse GCP_CRED.")
         creds_json = json.loads(gcp_creds_raw)
         GCP_CREDENTIALS = service_account.Credentials.from_service_account_info(creds_json)
         logging.info("Loaded GCP credentials from raw JSON.")
@@ -56,23 +57,33 @@ BUCKET_NAME = "state-sdtd-1"
 # Ensure the results directory exists
 RESULTS_DIR = "/tmp/simulation_results"
 os.makedirs(RESULTS_DIR, exist_ok=True)
+logging.debug(f"Ensured that results directory '{RESULTS_DIR}' exists.")
 
 ##############################################################################
 # 3. GCP Upload Function (Uses in-memory credentials)
 ##############################################################################
 def upload_to_gcp(bucket_name, source_file_name, destination_blob_name):
     """Uploads a file to a GCP bucket using in-memory credentials."""
+    logging.info(f"Attempting to upload '{source_file_name}' to bucket '{bucket_name}' as '{destination_blob_name}'.")
+
     if not GCP_CREDENTIALS:
         logging.error("No GCP credentials available; skipping upload.")
         return
 
-    client = storage.Client(credentials=GCP_CREDENTIALS)
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(destination_blob_name)
-    blob.upload_from_filename(source_file_name)
-    logging.info(f"File {source_file_name} uploaded to {destination_blob_name}.")
+    try:
+        client = storage.Client(credentials=GCP_CREDENTIALS)
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(destination_blob_name)
+        blob.upload_from_filename(source_file_name)
+        logging.info(f"Successfully uploaded '{source_file_name}' to '{destination_blob_name}' in bucket '{bucket_name}'.")
 
-
+        # Verify upload by listing the blob
+        if blob.exists():
+            logging.info(f"Verified that '{destination_blob_name}' exists in bucket '{bucket_name}'.")
+        else:
+            logging.error(f"Uploaded blob '{destination_blob_name}' does not exist in bucket '{bucket_name}'.")
+    except Exception as e:
+        logging.error(f"Failed to upload '{source_file_name}' to GCP: {e}")
 ##############################################################################
 # 4. Numerical Methods
 ##############################################################################
