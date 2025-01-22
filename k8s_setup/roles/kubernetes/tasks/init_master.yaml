@@ -67,14 +67,14 @@
     state: directory
     mode: 0755
 
-- name: Copy admin.conf to User's kube config
-  become: yes
-  copy:
-      src: /etc/kubernetes/admin.conf
-      dest: /home/asmae/.kube/config
-      remote_src: yes
-      owner: asmae
-  when: inventory_hostname in groups['control-plane']
+#- name: Copy admin.conf to User's kube config
+#  become: yes
+#  copy:
+#      src: /etc/kubernetes/admin.conf
+#      dest: /home/asmae/.kube/config
+#      remote_src: yes
+#      owner: asmae
+#  when: inventory_hostname in groups['control-plane']
 
 
 - name: Verify kubeconfig setup
