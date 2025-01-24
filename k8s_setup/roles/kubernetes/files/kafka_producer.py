@@ -52,7 +52,7 @@ def generate_stable_params():
         DENSITY=DENSITY,
         N_PRESSURE_POISSON_ITERATIONS=N_PRESSURE_POISSON_ITERATIONS,
         gif=gif,
-        plot=plot
+        plot=False
     )
 
 def main():
