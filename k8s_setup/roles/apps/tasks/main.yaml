@@ -33,3 +33,6 @@
   ansible.builtin.shell: |
     kubectl apply --kubeconfig=/home/asmae/.kube/config --validate=false -f /tmp/kafka-automation.yaml
   when: inventory_hostname in groups['control-plane']
+
+- name: Deploy Frontend and Backend Applications
+  import_tasks: frontend-backend.yaml

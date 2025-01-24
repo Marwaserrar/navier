@@ -1,35 +1,41 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 
-function App() {
-  const [count, setCount] = useState(0)
+const App = () => {
+  const [imageUrl, setImageUrl] = useState('');
+
+  const fetchImage = async () => {
+    try {
+      const response = await axios.get('http://express-backend:5000/api/image');
+      console.log('Image reçue:', response.data.image_url); // Log de l'URL reçue
+      setImageUrl(response.data.image_url);
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'image:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchImage();
+    const interval = setInterval(fetchImage, 5000); // Récupère une image toutes les 5 secondes
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    console.log('Image URL mise à jour:', imageUrl); // Log de la mise à jour de l'état
+  }, [imageUrl]);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div style={{ textAlign: 'center', marginTop: '50px' }}>
+      <h1>Affichage d'une image toutes les 5 secondes</h1>
+      {imageUrl && (
+        <img
+          src={`${imageUrl}?${new Date().getTime()}`} // Ajoute un timestamp pour éviter le cache
+          alt="Random"
+          style={{ maxWidth: '100%', height: 'auto' }}
+        />
+      )}
+    </div>
+  );
+};
 
-export default App
+export default App;

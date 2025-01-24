@@ -1,0 +1,24 @@
+# k8s_setup/roles/apps/tasks/frontend-backend.yaml
+- name: Deploy Frontend Application
+  k8s:
+    state: present
+    definition: "{{ lookup('file', '{{ playbook_dir }}/../../app/manifests/frontend-deployment.yaml') }}"
+  when: "'k8s_cluster' in group_names"
+
+- name: Deploy Frontend Service
+  k8s:
+    state: present
+    definition: "{{ lookup('file', '{{ playbook_dir }}/../../app/manifests/frontend-service.yaml') }}"
+  when: "'k8s_cluster' in group_names"
+
+- name: Deploy Backend Application
+  k8s:
+    state: present
+    definition: "{{ lookup('file', '{{ playbook_dir }}/../../app/manifests/backend-deployment.yaml') }}"
+  when: "'k8s_cluster' in group_names"
+
+- name: Deploy Backend Service
+  k8s:
+    state: present
+    definition: "{{ lookup('file', '{{ playbook_dir }}/../../app/manifests/backend-service.yaml') }}"
+  when: "'k8s_cluster' in group_names"
