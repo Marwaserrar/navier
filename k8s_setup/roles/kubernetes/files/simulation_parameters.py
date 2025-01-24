@@ -18,7 +18,7 @@ class SimulationParameters:
     N_ITERATIONS: int
     N_PRESSURE_POISSON_ITERATIONS: Optional[int] = 50
     gif: Optional[bool] = True
-    plot: Optional[bool] = False
+    plot: Optional[bool] = True
 
     def __post_init__(self):
         if self.T != self.DT * self.N_ITERATIONS:
