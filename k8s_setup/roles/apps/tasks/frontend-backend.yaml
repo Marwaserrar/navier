@@ -2,13 +2,13 @@
 - name: Deploy Frontend Application
   k8s:
     state: present
-    definition: "{{ lookup('file', '{{ playbook_dir }}/../../app/manifests/frontend-deployment.yaml') }}"
+    definition: "{{ lookup('file', '{{ playbook_dir }}/../app/manifests/frontend-deployment.yaml') }}"
   when: "'k8s_cluster' in group_names"
 
 - name: Deploy Frontend Service
   k8s:
     state: present
-    definition: "{{ lookup('file', '{{ playbook_dir }}/../../app/manifests/frontend-service.yaml') }}"
+    definition: "{{ lookup('file', '{{ playbook_dir }}/../app/manifests/frontend-service.yaml') }}"
   when: "'k8s_cluster' in group_names"
 
 - name: Deploy Backend Application
