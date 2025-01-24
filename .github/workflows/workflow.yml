@@ -22,10 +22,10 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Frontend Docker Image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/frontend:${{ github.run_number }} ./app/frontend
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/frontend:latest ./app/frontend
 
       - name: Build Backend Docker Image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/backend:${{ github.run_number }} ./app/express-backend
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/backend:latest ./app/express-backend
 
       - name: Install Trivy
         run: |
@@ -33,22 +33,23 @@ jobs:
 
       - name: Scan Frontend Docker Image with Trivy
         run: |
-          trivy image --severity HIGH,CRITICAL ${{ secrets.DOCKER_USERNAME }}/frontend:${{ github.run_number }}
+          trivy image --severity HIGH,CRITICAL ${{ secrets.DOCKER_USERNAME }}/frontend:latest
 
       - name: Scan Backend Docker Image with Trivy
         run: |
-          trivy image --severity HIGH,CRITICAL ${{ secrets.DOCKER_USERNAME }}/backend:${{ github.run_number }}
+          trivy image --severity HIGH,CRITICAL ${{ secrets.DOCKER_USERNAME }}/backend:latest
 
       - name: Push Frontend Docker Image to DockerHub
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/frontend:${{ github.run_number }}
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/frontend:latest
+        
 
       - name: Push Backend Docker Image to DockerHub
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/backend:${{ github.run_number }}
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/backend:latest
 
       - name: Update Image Version in Kubernetes Manifests
         run: |
-          find app/manifests/ -type f -name "*.yaml" -exec sed -i 's|image: ${{ secrets.DOCKER_USERNAME }}/frontend:.*|image: ${{ secrets.DOCKER_USERNAME }}/frontend:${{ github.run_number }}|g' {} \;
-          find app/manifests/ -type f -name "*.yaml" -exec sed -i 's|image: ${{ secrets.DOCKER_USERNAME }}/backend:.*|image: ${{ secrets.DOCKER_USERNAME }}/backend:${{ github.run_number }}|g' {} \;
+          find app/manifests/ -type f -name "*.yaml" -exec sed -i 's|image: ${{ secrets.DOCKER_USERNAME }}/frontend:.*|image: ${{ secrets.DOCKER_USERNAME }}/frontend:latest|g' {} \;
+          find app/manifests/ -type f -name "*.yaml" -exec sed -i 's|image: ${{ secrets.DOCKER_USERNAME }}/backend:.*|image: ${{ secrets.DOCKER_USERNAME }}/backend:latest|g' {} \;
 
       - name: Commit and push if there are changes
         run: |

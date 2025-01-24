@@ -14,14 +14,18 @@ spec:
     spec:
       containers:
       - name: express-backend
-        image: express-backend
+        image: soulayman379/backend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
         volumeMounts:
         - name: gcp-key-volume
-          mountPath: /tmp
+          mountPath: /secrets
           readOnly: true
       volumes:
       - name: gcp-key-volume
         secret:
           secretName: gcp-key-secret
+          items:
+            - key: gcp_cred.json
+              path: gcp_cred.json
