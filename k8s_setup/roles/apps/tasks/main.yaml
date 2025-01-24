@@ -1,5 +1,5 @@
-- name: integrate argoCD
-  import_tasks: argo.yaml
+#- name: integrate argoCD
+#  import_tasks: argo.yaml
 
 - name: integrate kafka
   import_tasks: kafka.yaml

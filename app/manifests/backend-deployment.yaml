@@ -18,14 +18,12 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
-        volumeMounts:
-        - name: gcp-key-volume
-          mountPath: /secrets
-          readOnly: true
+          volumeMounts:
+            - name: key-file-volume
+              mountPath: /secrets
+              readOnly: true
       volumes:
-      - name: gcp-key-volume
-        secret:
-          secretName: gcp-key-secret
-          items:
-            - key: gcp_cred.json
-              path: gcp_cred.json
+        - name: key-file-volume
+          hostPath:
+            path: /tmp/key-file.json
+            type: File
