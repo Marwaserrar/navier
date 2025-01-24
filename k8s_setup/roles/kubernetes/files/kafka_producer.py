@@ -19,7 +19,6 @@ def generate_stable_params():
     # Fixed values (from the docker run command)
     dx = 0.02040816326530612
     dy = 0.02040816326530612
-    Lx = 1.0
     Nx = 50
     Ny = 50
     T = 10.0  # Total simulation time
@@ -27,6 +26,10 @@ def generate_stable_params():
     N_PRESSURE_POISSON_ITERATIONS = 50  # Default value
     plot = True  # Always generate a plot
     gif = True  # Always generate a GIF
+
+    # Calculate Lx and Ly based on dx, dy, Nx, and Ny
+    Lx = dx * (Nx - 1)
+    Ly = dy * (Ny - 1)
 
     # Randomize KINEMATIC_VISCOSITY and DENSITY
     KINEMATIC_VISCOSITY = round(random.uniform(0.001, 0.1), 4)  # Random kinematic viscosity
@@ -43,7 +46,7 @@ def generate_stable_params():
         Lx=Lx,
         dx=dx,
         Ny=Ny,
-        Ly=Ny * dy,  # Calculate Ly based on Ny and dy
+        Ly=Ly,
         dy=dy,
         KINEMATIC_VISCOSITY=KINEMATIC_VISCOSITY,
         DENSITY=DENSITY,
