@@ -1,3 +1,4 @@
+require('dotenv').config({ path: '/app/.env' }); // Load .env file from the mounted path
 const express = require('express');
 const cors = require('cors');
 const { Storage } = require('@google-cloud/storage');
@@ -6,8 +7,13 @@ const path = require('path');
 const app = express();
 const port = 5000;
 
-// Middleware
-app.use(cors());
+// Read the SERVER_ADDRESS from environment variables
+const serverAddress = process.env.SERVER_ADDRESS || 'localhost';
+
+// Configure CORS to allow requests from the SERVER_ADDRESS
+app.use(
+  cors()
+);
 
 // GCP Storage Client
 const storage = new Storage({
@@ -22,31 +28,41 @@ app.get('/api/image', async (req, res) => {
     // List files in the bucket
     const [files] = await storage.bucket(bucketName).getFiles();
 
-    // Sort files by creation time (newest first)
-    files.sort((a, b) => b.metadata.timeCreated - a.metadata.timeCreated);
-
-    // Get the latest file
-    const latestFile = files[0];
-
-    if (!latestFile) {
+    if (!files.length) {
       return res.status(404).send('No files found in the bucket.');
     }
 
-    // Generate a signed URL for the file (valid for 15 minutes)
-    const [signedUrl] = await latestFile.getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+    // Sort files by creation time (newest first)
+    files.sort((a, b) => new Date(b.metadata.timeCreated) - new Date(a.metadata.timeCreated));
+
+    // Get the latest file
+    const latestFile = files[0];
+    const file = storage.bucket(bucketName).file(latestFile.name);
+
+    // Fetch file metadata to determine content type
+    const [metadata] = await file.getMetadata();
+    const contentType = metadata.contentType || 'application/octet-stream';
+
+    // Set appropriate headers
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${path.basename(latestFile.name)}"`);
+
+    // Create a read stream and pipe it to the response
+    const readStream = file.createReadStream();
+
+    // Handle stream errors
+    readStream.on('error', (err) => {
+      console.error('Error reading file from GCP bucket:', err);
+      res.status(500).send('Internal Server Error');
     });
 
-    // Return the signed URL
-    res.json({ image_url: signedUrl });
+    // Pipe the read stream to the response
+    readStream.pipe(res);
   } catch (err) {
     console.error('Error fetching image from GCP bucket:', err);
     res.status(500).send('Internal Server Error');
   }
 });
-
-// Start the server
 
 app.listen(port, '0.0.0.0', () => {
     console.log(`Backend server listening on http://0.0.0.0:${port}`);
