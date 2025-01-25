@@ -18,24 +18,19 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
-        env:
-        - name: SERVER_ADDRESS
-          valueFrom:
-            configMapKeyRef:
-              name: backend-env
-              key: SERVER_ADDRESS
         volumeMounts:
+        - name: env-file-volume
+          mountPath: /app/env.conf
+          subPath: env.conf
         - name: key-file-volume
           mountPath: /tmp
           readOnly: true
       volumes:
+      - name: env-file-volume
+        hostPath:
+          path: /etc/kubernetes/env.conf
+          type: File
       - name: key-file-volume
-        secret:
-          secretName: gcp-key-file
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: backend-env
-data:
-  SERVER_ADDRESS: "${SERVER_ADDRESS}"
+        hostPath:
+          path: /tmp/key-file.json
+          type: File
