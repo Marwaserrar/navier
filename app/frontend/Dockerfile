@@ -1,25 +1,28 @@
-# Stage 1: Build the React app
+# Stage 1: Build React App
 FROM node:18 as build
 
 WORKDIR /app
+
+# Copy package.json and package-lock.json
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install
+
+# Copy the rest of the application code
 COPY . .
+
+# Build the React app
 RUN npm run build
 
-# Stage 2: Serve using Nginx with proper configuration
-FROM nginx:alpine
+FROM nginx:latest as prod
 
-# Remove ALL default configurations and entrypoint scripts
-RUN rm -rf /etc/nginx/conf.d/* && \
-    rm -rf /docker-entrypoint.d/*
-
-# Copy built assets and custom config
 COPY --from=build /app/build /usr/share/nginx/html
+RUN rm -rf /etc/nginx/nginx.conf
 COPY nginx.conf /etc/nginx/nginx.conf
+RUN cat /etc/nginx/nginx.conf
+RUN echo "copied properly"
 
-# Verify configuration during build
-RUN nginx -t
+EXPOSE 80/tcp
 
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/usr/sbin/nginx", "-g", "daemon off;"]
