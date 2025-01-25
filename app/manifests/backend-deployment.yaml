@@ -25,6 +25,5 @@ spec:
             readOnly: true
       volumes:
         - name: gcp-key-volume
-          hostPath:
-            path: /tmp/key-file.json
-            type: File
+          secret:
+            secretName: gcp-key-secret

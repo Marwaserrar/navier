@@ -111,8 +111,8 @@
 - name: Create Kubernetes secret for GCP credentials
   become: yes
   command: >
-    kubectl create secret generic gcp-cred-secret
-    --from-file=gcp_cred.json=/tmp/key-file.json
+    kubectl create secret generic gcp-key-secret
+    --from-file=key-file.json=/tmp/key-file.json
     --kubeconfig=/home/asmae/.kube/config
   when: inventory_hostname in groups['control-plane']
 
