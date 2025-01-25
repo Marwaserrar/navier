@@ -2,11 +2,12 @@ apiVersion: v1
 kind: Service
 metadata:
   name: express-backend
+  namespace: default
 spec:
-  type: NodePort  # Change from ClusterIP to NodePort
-  ports:
-  - port: 5000
-    targetPort: 5000
-    nodePort: 31518  # Choose a port between 30000-32767
   selector:
     app: express-backend
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+  type: ClusterIP
