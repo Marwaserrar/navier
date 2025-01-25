@@ -2,27 +2,24 @@
 FROM node:18 as build
 
 WORKDIR /app
-
-# Copy package.json and package-lock.json
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
-
-# Copy the rest of the application code
 COPY . .
-
-# Build the React app
 RUN npm run build
 
-# Stage 2: Serve the React app using Nginx
+# Stage 2: Serve using Nginx with proper configuration
 FROM nginx:alpine
 
-# Copy the build output to replace the default Nginx contents
-COPY --from=build /app/dist /usr/share/nginx/html
+# Remove ALL default configurations and entrypoint scripts
+RUN rm -rf /etc/nginx/conf.d/* && \
+    rm -rf /docker-entrypoint.d/*
 
-# Expose port 80
+# Copy built assets and custom config
+COPY --from=build /app/build /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Verify configuration during build
+RUN nginx -t
+
 EXPOSE 80
-
-# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
