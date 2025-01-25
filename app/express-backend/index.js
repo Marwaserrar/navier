@@ -1,32 +1,31 @@
 const express = require('express');
 const cors = require('cors');
 const { Storage } = require('@google-cloud/storage');
+const path = require('path');
 
 const app = express();
-const port = process.env.BACKEND_PORT || 5000; // Default to port 5000 if not specified
-const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:80'; // Default frontend URL
-const bucketName = process.env.GCP_BUCKET_NAME || 'state-sdtd-1'; // Default bucket name
+const port = 5000;
 
-// Middleware for CORS
-app.use(
-  cors({
-    origin: frontendUrl, // Allow traffic from the frontend
-  })
-);
+// Middleware
+app.use(cors());
 
-// GCP Storage Client (Path remains hardcoded as requested)
+// GCP Storage Client
 const storage = new Storage({
-  keyFilename: '/tmp/key-file.json', // Hardcoded path to the GCP service account key file
+  keyFilename: '/tmp/key-file.json', // Path to the mounted service account key file
 });
+
+const bucketName = 'state-sdtd-1'; // Replace with your GCP bucket name
 
 // Route to fetch the latest image/GIF from the GCP bucket
 app.get('/api/image', async (req, res) => {
   try {
+    // List files in the bucket
     const [files] = await storage.bucket(bucketName).getFiles();
 
     // Sort files by creation time (newest first)
-    files.sort((a, b) => new Date(b.metadata.timeCreated) - new Date(a.metadata.timeCreated));
+    files.sort((a, b) => b.metadata.timeCreated - a.metadata.timeCreated);
 
+    // Get the latest file
     const latestFile = files[0];
 
     if (!latestFile) {
@@ -39,6 +38,7 @@ app.get('/api/image', async (req, res) => {
       expires: Date.now() + 15 * 60 * 1000, // 15 minutes
     });
 
+    // Return the signed URL
     res.json({ image_url: signedUrl });
   } catch (err) {
     console.error('Error fetching image from GCP bucket:', err);
@@ -46,7 +46,7 @@ app.get('/api/image', async (req, res) => {
   }
 });
 
-// Start the backend server
+// Start the server
 app.listen(port, () => {
-  console.log(`Backend is running on http://localhost:${port}`);
+  console.log(`Serveur backend en écoute sur http://localhost:${port}`);
 });

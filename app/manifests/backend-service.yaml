@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: express-backend
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
   - port: 5000
     targetPort: 5000

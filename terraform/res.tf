@@ -36,9 +36,6 @@ resource "google_compute_subnetwork" "k8s_subnet" {
 }
 
 
-
-
-
 resource "google_compute_firewall" "k8s_firewall" {
   name    = "k8s-firewall"
   network = google_compute_network.k8s_network.name

@@ -13,10 +13,8 @@ spec:
         app: react-frontend
     spec:
       containers:
-        - name: react-frontend
-          image: soulayman379/frontend:latest
-          env:
-            - name: REACT_APP_BACKEND_URL
-              value: "{{ react_app_backend_url }}"
-          ports:
-            - containerPort: 80
+      - name: react-frontend
+        image: soulayman379/frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80

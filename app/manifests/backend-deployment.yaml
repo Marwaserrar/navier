@@ -15,13 +15,7 @@ spec:
       containers:
       - name: express-backend
         image: soulayman379/backend:latest
-        env:
-        - name: BACKEND_PORT
-          value: "5000"
-        - name: FRONTEND_URL
-          value: "{{ frontend_url }}"
-        - name: GCP_BUCKET_NAME
-          value: "state-sdtd-1"
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
           volumeMounts:

@@ -1,6 +1,5 @@
-
-# Step 1: Copy Kubernetes Manifests to Control-Plane
-- name: Copy frontend deployment manifest to control-plane
+# k8s_setup/roles/apps/tasks/frontend-backend.yaml
+- name: Copy frontend manifests to control-plane
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../app/manifests/frontend-deployment.yaml"
     dest: /tmp/frontend-deployment.yaml
@@ -12,7 +11,7 @@
     dest: /tmp/frontend-service.yaml
   when: inventory_hostname in groups['control-plane']
 
-- name: Copy backend deployment manifest to control-plane
+- name: Copy backend manifests to control-plane
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../app/manifests/backend-deployment.yaml"
     dest: /tmp/backend-deployment.yaml
@@ -24,65 +23,22 @@
     dest: /tmp/backend-service.yaml
   when: inventory_hostname in groups['control-plane']
 
-# Step 2: Read the `.env` File from Master Node
-- name: Read .env file from master node
-  ansible.builtin.slurp:
-    src: /home/asmae/.env
-  register: env_file_content
-  when: inventory_hostname in groups['control-plane']
-
-# Step 3: Decode and Parse the `.env` File
-- name: Decode and parse .env file
-  set_fact:
-    env_vars: "{{ env_file_content.content | b64decode | splitlines() | 
-                select('match', '^[^#].*=.*$') | 
-                map('regex_replace', '^([^=]+)=(.*)$', '\\1=\\2') | 
-                list | 
-                items2dict }}"
-  when: inventory_hostname in groups['control-plane']
-
-# Step 4: Inject REACT_APP_BACKEND_URL into Frontend Deployment Manifest
-- name: Inject REACT_APP_BACKEND_URL into frontend deployment
-  ansible.builtin.replace:
-    path: /tmp/frontend-deployment.yaml
-    regexp: 'REACT_APP_BACKEND_URL=.*'
-    replace: "REACT_APP_BACKEND_URL={{ env_vars.REACT_APP_BACKEND_URL }}"
-  when: inventory_hostname in groups['control-plane']
-
-# Step 5: Inject FRONTEND_URL into Backend Deployment Manifest
-- name: Inject FRONTEND_URL into backend deployment
-  ansible.builtin.replace:
-    path: /tmp/backend-deployment.yaml
-    regexp: 'FRONTEND_URL=.*'
-    replace: "FRONTEND_URL={{ env_vars.FRONTEND_URL }}"
-  when: inventory_hostname in groups['control-plane']
-
-# Step 6: Apply Updated Frontend Deployment
-- name: Apply updated frontend deployment with injected REACT_APP_BACKEND_URL
+- name: Apply frontend deployment
   ansible.builtin.shell: |
     kubectl apply --kubeconfig=/home/asmae/.kube/config --validate=false -f /tmp/frontend-deployment.yaml
   when: inventory_hostname in groups['control-plane']
 
-# Step 7: Apply Frontend Service
 - name: Apply frontend service
   ansible.builtin.shell: |
     kubectl apply --kubeconfig=/home/asmae/.kube/config --validate=false -f /tmp/frontend-service.yaml
   when: inventory_hostname in groups['control-plane']
 
-# Step 8: Apply Updated Backend Deployment
-- name: Apply updated backend deployment with injected FRONTEND_URL
+- name: Apply backend deployment
   ansible.builtin.shell: |
     kubectl apply --kubeconfig=/home/asmae/.kube/config --validate=false -f /tmp/backend-deployment.yaml
   when: inventory_hostname in groups['control-plane']
 
-# Step 9: Apply Backend Service
 - name: Apply backend service
   ansible.builtin.shell: |
     kubectl apply --kubeconfig=/home/asmae/.kube/config --validate=false -f /tmp/backend-service.yaml
-  when: inventory_hostname in groups['control-plane']
-
-# Step 10: Rollout Restart Backend Deployment to Apply New Env Variable
-- name: Rollout restart backend deployment to apply new FRONTEND_URL
-  ansible.builtin.shell: |
-    kubectl rollout restart deployment/express-backend --kubeconfig=/home/asmae/.kube/config
   when: inventory_hostname in groups['control-plane']
