@@ -12,15 +12,12 @@ const App = () => {
       setError('');
 
       const response = await axios.get('/api/image', {
-        responseType: 'blob', // Important: Receive data as a Blob
+        responseType: 'blob', // Receive data as a Blob
       });
 
       // Create a local URL of the image blob
       const url = URL.createObjectURL(response.data);
       setImageUrl(url);
-
-      // Revoke the object URL after image is loaded to free memory
-      // Optional: You can implement cleanup if needed
     } catch (error) {
       console.error('Erreur lors de la récupération de l\'image:', error);
       setError('Erreur lors de la récupération de l\'image.');
@@ -31,7 +28,7 @@ const App = () => {
 
   useEffect(() => {
     fetchImage();
-    const interval = setInterval(fetchImage, 5000); // Récupère une image toutes les 5 secondes
+    const interval = setInterval(fetchImage, 5000); // Fetch a new image every 5 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -39,6 +36,15 @@ const App = () => {
     if (imageUrl) {
       console.log('Image URL mise à jour:', imageUrl);
     }
+  }, [imageUrl]);
+
+  // Cleanup to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    };
   }, [imageUrl]);
 
   return (
@@ -67,8 +73,8 @@ const App = () => {
           {!loading && !error && imageUrl && (
             <div className="flex justify-center">
               <img
-                src={`${imageUrl}?${new Date().getTime()}`} // Ajoute un timestamp pour éviter le cache
-                alt="Random"
+                src={imageUrl} // Use the blob URL directly without appending a timestamp
+                alt="Latest from GCP Bucket"
                 className="rounded-lg shadow-md max-h-96"
               />
             </div>
