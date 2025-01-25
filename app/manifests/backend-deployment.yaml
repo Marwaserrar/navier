@@ -18,19 +18,12 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
-        volumeMounts:
-        - name: env-file-volume
-          mountPath: /app/env.conf
-          subPath: env.conf
-        - name: key-file-volume
-          mountPath: /tmp
-          readOnly: true
+          volumeMounts:
+            - name: key-file-volume
+              mountPath: /secrets
+              readOnly: true
       volumes:
-      - name: env-file-volume
-        hostPath:
-          path: /etc/kubernetes/env.conf
-          type: File
-      - name: key-file-volume
-        hostPath:
-          path: /tmp/key-file.json
-          type: File
+        - name: key-file-volume
+          hostPath:
+            path: /tmp/key-file.json
+            type: File

@@ -18,12 +18,3 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 80
-        volumeMounts:
-        - name: env-file-volume
-          mountPath: /app/env.conf
-          subPath: env.conf
-      volumes:
-      - name: env-file-volume
-        hostPath:
-          path: /etc/kubernetes/env.conf
-          type: File
