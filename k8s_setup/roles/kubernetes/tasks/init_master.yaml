@@ -93,6 +93,30 @@
   when: inventory_hostname in groups['control-plane']
 
 
+
+- name: Fetch external IP of master node
+  command: "curl -s http://whatismyip.akamai.com/"
+  register: master_ip
+  when: inventory_hostname in groups['control-plane']
+
+- name: Save master IP to `.env` file
+  copy:
+    content: |
+      REACT_APP_BACKEND_URL=http://{{ master_ip.stdout }}:5000
+      FRONTEND_URL=http://{{ master_ip.stdout }}:80
+    dest: /tmp/.env
+  when: inventory_hostname in groups['control-plane']
+
+
+- name: Copy `.env` to master node
+  ansible.builtin.copy:
+    src: /tmp/.env
+    dest: /home/asmae/.env
+  when: inventory_hostname in groups['control-plane']
+
+
+
+
 - name: Verify GCP credentials file exists
   stat:
     path: /tmp/key-file.json
@@ -143,6 +167,9 @@
     dest: /home/asmae/kafka-scripts/kafka_consumer.py
     mode: '0644'
   when: inventory_hostname in groups['control-plane']
+
+
+
 
 # - name: Fail if kubeconfig is not set up correctly
 #   fail:

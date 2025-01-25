@@ -3,14 +3,14 @@ import axios from 'axios';
 
 const App = () => {
   const [imageUrl, setImageUrl] = useState('');
+  const backendUrl = process.env.REACT_APP_BACKEND_URL;
 
   const fetchImage = async () => {
     try {
-      const response = await axios.get('http://express-backend:5000/api/image');
-      console.log('Image reçue:', response.data.image_url); // Log de l'URL reçue
+      const response = await axios.get(`${backendUrl}/api/image`);
       setImageUrl(response.data.image_url);
     } catch (error) {
-      console.error('Erreur lors de la récupération de l\'image:', error);
+      console.error('Error fetching the image:', error);
     }
   };
 
