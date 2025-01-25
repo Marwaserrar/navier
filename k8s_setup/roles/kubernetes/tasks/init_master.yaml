@@ -144,6 +144,44 @@
     mode: '0644'
   when: inventory_hostname in groups['control-plane']
 
+- name: Get the IP address of the master node
+  shell: |
+    hostname -I | awk '{print $1}'
+  args:
+    executable: /bin/bash
+  when: inventory_hostname in groups['control-plane']
+  register: master_ip
+
+- name: Print the obtained IP address
+  debug:
+    msg: "Obtained IP address of the master node: {{ master_ip.stdout }}"
+  when: inventory_hostname in groups['control-plane']
+
+- name: Ensure the environment file directory exists
+  file:
+    path: /etc/kubernetes
+    state: directory
+    mode: '0755'
+  when: inventory_hostname in groups['control-plane']
+
+- name: Print the path of the environment file directory
+  debug:
+    msg: "Environment file directory: /etc/kubernetes"
+  when: inventory_hostname in groups['control-plane']
+
+- name: Store the master node IP address in an environment file
+  lineinfile:
+    path: /etc/kubernetes/env.conf
+    line: "SERVER_ADDRESS={{ master_ip.stdout }}"
+    create: yes
+    mode: '0644'
+  when: inventory_hostname in groups['control-plane']
+
+- name: Print the stored IP address in the environment file
+  debug:
+    msg: "Stored IP address in /etc/kubernetes/env.conf: SERVER_ADDRESS={{ master_ip.stdout }}"
+  when: inventory_hostname in groups['control-plane']
+
 # - name: Fail if kubeconfig is not set up correctly
 #   fail:
 #     msg: "Kubeconfig was not set up correctly. ~/.kube/config is missing."

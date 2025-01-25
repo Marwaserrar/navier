@@ -18,3 +18,30 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 80
+        env:
+        - name: REACT_APP_SERVER_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: react-env
+              key: SERVER_ADDRESS
+        volumeMounts:
+        - name: env-config
+          mountPath: /usr/share/nginx/html/env.js
+          subPath: env.js
+      volumes:
+      - name: env-config
+        configMap:
+          name: react-env
+          items:
+          - key: env.js
+            path: env.js
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: react-env
+data:
+  env.js: |
+    window.env = {
+      SERVER_ADDRESS: "${SERVER_ADDRESS}"
+    };

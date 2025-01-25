@@ -4,9 +4,11 @@ import axios from 'axios';
 const App = () => {
   const [imageUrl, setImageUrl] = useState('');
 
+  const serverAddress = process.env.REACT_APP_SERVER_ADDRESS || window.env.SERVER_ADDRESS;
+
   const fetchImage = async () => {
     try {
-      const response = await axios.get('http://express-backend:5000/api/image');
+      const response = await axios.get(`http://${serverAddress}:5000/api/image`);
       console.log('Image reçue:', response.data.image_url); // Log de l'URL reçue
       setImageUrl(response.data.image_url);
     } catch (error) {
