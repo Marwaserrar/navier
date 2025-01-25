@@ -11,7 +11,7 @@ app.use(cors());
 
 // GCP Storage Client
 const storage = new Storage({
-  keyFilename: '/tmp/key-file.json', // Path to the mounted service account key file
+  keyFilename: '/secrets/key-file.json', // Path to the mounted service account key file
 });
 
 const bucketName = 'state-sdtd-1'; // Replace with your GCP bucket name
@@ -47,6 +47,7 @@ app.get('/api/image', async (req, res) => {
 });
 
 // Start the server
-app.listen(port, () => {
-  console.log(`Serveur backend en écoute sur http://localhost:${port}`);
-});
+
+app.listen(port, '0.0.0.0', () => {
+    console.log(`Backend server listening on http://0.0.0.0:${port}`);
+  });
