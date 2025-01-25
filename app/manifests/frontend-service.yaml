@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: react-frontend
 spec:
-  type: LoadBalancer
+  type: NodePort  # Change from LoadBalancer to NodePort
   ports:
   - port: 80
     targetPort: 80
