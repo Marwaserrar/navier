@@ -19,12 +19,12 @@ spec:
         ports:
         - containerPort: 5000
         volumeMounts:
-          - name: key-file-volume
-            mountPath: /secrets/key-file.json  # Mount as file path
-            subPath: key-file.json             # Extract specific file
+          - name: gcp-key-volume
+            mountPath: /secrets/key-file.json
+            subPath: key-file.json
             readOnly: true
       volumes:
-        - name: key-file-volume
+        - name: gcp-key-volume
           hostPath:
             path: /tmp/key-file.json
-            type: File  # Keep as File type
+            type: File
