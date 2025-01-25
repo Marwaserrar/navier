@@ -18,12 +18,24 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
-          volumeMounts:
-            - name: key-file-volume
-              mountPath: /secrets
-              readOnly: true
-      volumes:
+        env:
+        - name: SERVER_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: backend-env
+              key: SERVER_ADDRESS
+        volumeMounts:
         - name: key-file-volume
-          hostPath:
-            path: /tmp/key-file.json
-            type: File
+          mountPath: /tmp
+          readOnly: true
+      volumes:
+      - name: key-file-volume
+        secret:
+          secretName: gcp-key-file
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-env
+data:
+  SERVER_ADDRESS: "${SERVER_ADDRESS}"

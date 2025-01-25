@@ -144,17 +144,17 @@
     mode: '0644'
   when: inventory_hostname in groups['control-plane']
 
-- name: Get the IP address of the master node
+- name: Get the public IP address of the master node
   shell: |
-    hostname -I | awk '{print $1}'
+    curl -s ifconfig.co
   args:
     executable: /bin/bash
   when: inventory_hostname in groups['control-plane']
-  register: master_ip
+  register: master_public_ip
 
-- name: Print the obtained IP address
+- name: Print the obtained public IP address
   debug:
-    msg: "Obtained IP address of the master node: {{ master_ip.stdout }}"
+    msg: "Obtained public IP address of the master node: {{ master_public_ip.stdout }}"
   when: inventory_hostname in groups['control-plane']
 
 - name: Ensure the environment file directory exists
@@ -169,17 +169,17 @@
     msg: "Environment file directory: /etc/kubernetes"
   when: inventory_hostname in groups['control-plane']
 
-- name: Store the master node IP address in an environment file
+- name: Store the master node public IP address in an environment file
   lineinfile:
     path: /etc/kubernetes/env.conf
-    line: "SERVER_ADDRESS={{ master_ip.stdout }}"
+    line: "SERVER_ADDRESS={{ master_public_ip.stdout }}"
     create: yes
     mode: '0644'
   when: inventory_hostname in groups['control-plane']
 
-- name: Print the stored IP address in the environment file
+- name: Print the stored public IP address in the environment file
   debug:
-    msg: "Stored IP address in /etc/kubernetes/env.conf: SERVER_ADDRESS={{ master_ip.stdout }}"
+    msg: "Stored public IP address in /etc/kubernetes/env.conf: SERVER_ADDRESS={{ master_public_ip.stdout }}"
   when: inventory_hostname in groups['control-plane']
 
 # - name: Fail if kubeconfig is not set up correctly
