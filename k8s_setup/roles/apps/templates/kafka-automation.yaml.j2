@@ -1,6 +1,6 @@
 ---
 # ------------------------------------------------------------------------
-# Pod 1: kafka-cli (control-plane shell)
+# Pod 1: kafka-cli (just a shell with Kafka+GCP dependencies)
 # ------------------------------------------------------------------------
 apiVersion: v1
 kind: Pod
@@ -10,7 +10,7 @@ metadata:
     app: kafka-cli
 spec:
   nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
+    node-role.kubernetes.io/control-plane: ""  # Use control-plane label for master
   tolerations:
     - key: "node-role.kubernetes.io/control-plane"
       operator: "Exists"
@@ -44,7 +44,7 @@ spec:
 
 ---
 # ------------------------------------------------------------------------
-# Pod 2: kafka-producer 
+# Pod 2: kafka-producer (runs the producer code automatically)
 # ------------------------------------------------------------------------
 apiVersion: v1
 kind: Pod
@@ -72,7 +72,9 @@ spec:
           cp /scripts/kafka_producer.py . &&
           echo "Starting producer loop..." &&
           while true; do
+            echo "Running producer..."
             python kafka_producer.py
+            echo "Sleeping for 5 seconds..."
             sleep 15
           done
       volumeMounts:
@@ -103,7 +105,7 @@ spec:
 
 ---
 # ------------------------------------------------------------------------
-# Consumer Pods 3-7 (5 instances)
+# Pod 3: kafka-listener-1 (runs the consumer)
 # ------------------------------------------------------------------------
 apiVersion: v1
 kind: Pod
@@ -119,48 +121,59 @@ spec:
       operator: "Exists"
       effect: "NoSchedule"
   containers:
-    - name: listener-1-container
+    - name: kafka-listener-1-container
       image: python:3.9-slim
       command: ["/bin/bash", "-c"]
       args:
         - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
-          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
+          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow argparse &&
           mkdir -p /app && cd /app &&
-          cp /scripts/*.py . &&
-          python kafka_consumer.py
+          cp /scripts/simulation_parameters.py . &&
+          cp /scripts/kafka_consumer.py . &&
+          echo "Running consumer #1..." &&
+          python kafka_consumer.py &&
+          echo "Consumer #1 done. Keeping container alive." &&
+          tail -f /dev/null
       volumeMounts:
         - name: scripts-volume
           mountPath: /scripts
           readOnly: true
-        - name: gcp-creds
+        - name: gcp-cred-volume
           mountPath: /secrets
+          readOnly: true
   volumes:
     - name: scripts-volume
       hostPath:
         path: /home/asmae/kafka-scripts
-    - name: gcp-creds
+    - name: gcp-cred-volume
       secret:
         secretName: gcp-cred-secret
         items:
           - key: gcp_cred.json
-            path: credentials.json
+            path: gcp_cred.json
+  restartPolicy: Always
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: listener-1-svc
+  name: kafka-listener-1-svc
 spec:
   selector:
     app: kafka-listener-1
   ports:
-    - port: 8080
+    - name: listener1-port
+      protocol: TCP
+      port: 8080
       targetPort: 8080
       nodePort: 30082
   type: NodePort
 
 ---
+# ------------------------------------------------------------------------
+# Pod 4: kafka-listener-2 (runs the consumer again, or a second instance)
+# ------------------------------------------------------------------------
 apiVersion: v1
 kind: Pod
 metadata:
@@ -175,199 +188,50 @@ spec:
       operator: "Exists"
       effect: "NoSchedule"
   containers:
-    - name: listener-2-container
+    - name: kafka-listener-2-container
       image: python:3.9-slim
       command: ["/bin/bash", "-c"]
       args:
         - |
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
-          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
+          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow argparse &&
           mkdir -p /app && cd /app &&
-          cp /scripts/*.py . &&
-          python kafka_consumer.py
+          cp /scripts/simulation_parameters.py . &&
+          cp /scripts/kafka_consumer.py . &&
+          echo "Running consumer #2..." &&
+          python kafka_consumer.py &&
+          echo "Consumer #2 done. Keeping container alive." &&
+          tail -f /dev/null
       volumeMounts:
         - name: scripts-volume
           mountPath: /scripts
           readOnly: true
-        - name: gcp-creds
+        - name: gcp-cred-volume
           mountPath: /secrets
+          readOnly: true
   volumes:
     - name: scripts-volume
       hostPath:
         path: /home/asmae/kafka-scripts
-    - name: gcp-creds
+    - name: gcp-cred-volume
       secret:
         secretName: gcp-cred-secret
-
+        items:
+          - key: gcp_cred.json
+            path: gcp_cred.json
+  restartPolicy: Always
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: listener-2-svc
+  name: kafka-listener-2-svc
 spec:
   selector:
     app: kafka-listener-2
   ports:
-    - port: 8080
+    - name: listener2-port
+      protocol: TCP
+      port: 8080
       targetPort: 8080
       nodePort: 30083
-  type: NodePort
-
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kafka-listener-3
-  labels:
-    app: kafka-listener-3
-spec:
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
-  tolerations:
-    - key: "node-role.kubernetes.io/control-plane"
-      operator: "Exists"
-      effect: "NoSchedule"
-  containers:
-    - name: listener-3-container
-      image: python:3.9-slim
-      command: ["/bin/bash", "-c"]
-      args:
-        - |
-          apt-get update && apt-get install -y gcc libatlas-base-dev &&
-          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          mkdir -p /app && cd /app &&
-          cp /scripts/*.py . &&
-          python kafka_consumer.py
-      volumeMounts:
-        - name: scripts-volume
-          mountPath: /scripts
-          readOnly: true
-        - name: gcp-creds
-          mountPath: /secrets
-  volumes:
-    - name: scripts-volume
-      hostPath:
-        path: /home/asmae/kafka-scripts
-    - name: gcp-creds
-      secret:
-        secretName: gcp-cred-secret
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: listener-3-svc
-spec:
-  selector:
-    app: kafka-listener-3
-  ports:
-    - port: 8080
-      targetPort: 8080
-      nodePort: 30084
-  type: NodePort
-
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kafka-listener-4
-  labels:
-    app: kafka-listener-4
-spec:
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
-  tolerations:
-    - key: "node-role.kubernetes.io/control-plane"
-      operator: "Exists"
-      effect: "NoSchedule"
-  containers:
-    - name: listener-4-container
-      image: python:3.9-slim
-      command: ["/bin/bash", "-c"]
-      args:
-        - |
-          apt-get update && apt-get install -y gcc libatlas-base-dev &&
-          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          mkdir -p /app && cd /app &&
-          cp /scripts/*.py . &&
-          python kafka_consumer.py
-      volumeMounts:
-        - name: scripts-volume
-          mountPath: /scripts
-          readOnly: true
-        - name: gcp-creds
-          mountPath: /secrets
-  volumes:
-    - name: scripts-volume
-      hostPath:
-        path: /home/asmae/kafka-scripts
-    - name: gcp-creds
-      secret:
-        secretName: gcp-cred-secret
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: listener-4-svc
-spec:
-  selector:
-    app: kafka-listener-4
-  ports:
-    - port: 8080
-      targetPort: 8080
-      nodePort: 30085
-  type: NodePort
-
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kafka-listener-5
-  labels:
-    app: kafka-listener-5
-spec:
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
-  tolerations:
-    - key: "node-role.kubernetes.io/control-plane"
-      operator: "Exists"
-      effect: "NoSchedule"
-  containers:
-    - name: listener-5-container
-      image: python:3.9-slim
-      command: ["/bin/bash", "-c"]
-      args:
-        - |
-          apt-get update && apt-get install -y gcc libatlas-base-dev &&
-          pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
-          mkdir -p /app && cd /app &&
-          cp /scripts/*.py . &&
-          python kafka_consumer.py
-      volumeMounts:
-        - name: scripts-volume
-          mountPath: /scripts
-          readOnly: true
-        - name: gcp-creds
-          mountPath: /secrets
-  volumes:
-    - name: scripts-volume
-      hostPath:
-        path: /home/asmae/kafka-scripts
-    - name: gcp-creds
-      secret:
-        secretName: gcp-cred-secret
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: listener-5-svc
-spec:
-  selector:
-    app: kafka-listener-5
-  ports:
-    - port: 8080
-      targetPort: 8080
-      nodePort: 30086
   type: NodePort
