@@ -236,11 +236,9 @@ spec:
       nodePort: 30083
   type: NodePort
 
-
-
   ---
 # ------------------------------------------------------------------------
-# Pod 4: kafka-listener-3 (runs the consumer again, or a second instance)
+# Pod 5: kafka-listener-3 (third consumer instance)
 # ------------------------------------------------------------------------
 apiVersion: v1
 kind: Pod
@@ -256,7 +254,7 @@ spec:
       operator: "Exists"
       effect: "NoSchedule"
   containers:
-    - name: kafka-listener-2-container
+    - name: kafka-listener-3-container
       image: python:3.9-slim
       command: ["/bin/bash", "-c"]
       args:
@@ -266,9 +264,9 @@ spec:
           mkdir -p /app && cd /app &&
           cp /scripts/simulation_parameters.py . &&
           cp /scripts/kafka_consumer.py . &&
-          echo "Running consumer #2..." &&
+          echo "Running consumer #3..." &&
           python kafka_consumer.py &&
-          echo "Consumer #2 done. Keeping container alive." &&
+          echo "Consumer #3 done. Keeping container alive." &&
           tail -f /dev/null
       volumeMounts:
         - name: scripts-volume
@@ -288,6 +286,7 @@ spec:
           - key: gcp_cred.json
             path: gcp_cred.json
   restartPolicy: Always
+
 ---
 apiVersion: v1
 kind: Service
@@ -297,17 +296,16 @@ spec:
   selector:
     app: kafka-listener-3
   ports:
-    - name: listener2-port
+    - name: listener3-port
       protocol: TCP
       port: 8080
       targetPort: 8080
       nodePort: 30084
   type: NodePort
 
-
-  ---
+---
 # ------------------------------------------------------------------------
-# Pod 4: kafka-listener-4 (runs the consumer again, or a second instance)
+# Pod 6: kafka-listener-4 (fourth consumer instance)
 # ------------------------------------------------------------------------
 apiVersion: v1
 kind: Pod
@@ -323,7 +321,7 @@ spec:
       operator: "Exists"
       effect: "NoSchedule"
   containers:
-    - name: kafka-listener-2-container
+    - name: kafka-listener-4-container
       image: python:3.9-slim
       command: ["/bin/bash", "-c"]
       args:
@@ -333,9 +331,9 @@ spec:
           mkdir -p /app && cd /app &&
           cp /scripts/simulation_parameters.py . &&
           cp /scripts/kafka_consumer.py . &&
-          echo "Running consumer #2..." &&
+          echo "Running consumer #4..." &&
           python kafka_consumer.py &&
-          echo "Consumer #2 done. Keeping container alive." &&
+          echo "Consumer #4 done. Keeping container alive." &&
           tail -f /dev/null
       volumeMounts:
         - name: scripts-volume
@@ -355,6 +353,7 @@ spec:
           - key: gcp_cred.json
             path: gcp_cred.json
   restartPolicy: Always
+
 ---
 apiVersion: v1
 kind: Service
@@ -364,7 +363,7 @@ spec:
   selector:
     app: kafka-listener-4
   ports:
-    - name: listener2-port
+    - name: listener4-port
       protocol: TCP
       port: 8080
       targetPort: 8080
