@@ -1,6 +1,6 @@
 # Navier Equations Solver with Kafka, Terraform, Ansible, and GitHub Actions
 
-This project is designed to solve Navier equations by creating a distributed system. It uses Terraform and Ansible to set up a Kubernetes cluster and leverages Kafka for data production and consumption. The project integrates GitHub Actions for CI/CD and uses Argo CD for monitoring. 
+This project is designed to solve Navier equations by creating a distributed system. It uses Terraform and Ansible to set up a Kubernetes cluster and leverages Kafka for data production and consumption. The project integrates GitHub Actions for CI/CD and uses Argo CD for monitoring.
 
 ## Features
 
@@ -24,6 +24,18 @@ You need to update the following files with your specific details:
 - **DockerHub User and Repository Name**:
   - `app/manifest/backend-deployment.yaml`
   - `app/manifest/frontend-deployment.yaml`
+
+### GitHub Actions Variables
+
+The provided GitHub Actions workflow requires the following secrets to be defined in your repository's settings:
+
+- **DOCKER_USERNAME**: DockerHub username, used for logging in and tagging images.
+- **DOCKER_PASSWORD**: DockerHub password, used for authentication during login.
+- **SSH_SECRET**: Private SSH key used by Ansible to access the servers.
+- **GCP_CRED**: Base64-encoded Google Cloud Platform credentials file, required for authentication with GCP services.
+- **TF_PUB**: Public SSH key used for the Terraform deployment.
+
+These variables ensure that the CI/CD pipeline functions as intended, handling Docker image builds, security scans, and deployments automatically.
 
 ### Setting Up the Cluster
 
