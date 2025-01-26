@@ -60,7 +60,7 @@ def generate_stable_params():
         Ny=Ny,
         N_ITERATIONS=N_ITERATIONS,
         N_PRESSURE_POISSON_ITERATIONS=N_PRESSURE_POISSON_ITERATIONS,
-        gif=True,
+        gif=False,
         plot=True
     )
 
