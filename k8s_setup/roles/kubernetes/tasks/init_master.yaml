@@ -129,9 +129,9 @@
     path: /home/asmae/kafka-scripts
     state: directory
     mode: '0755'
-  when: inventory_hostname in groups['control-plane']
+ # when: inventory_hostname in groups['control-plane']
 
-  
+
 - name: Copy simulation_parameters.py to all nodes
   copy:
     src: files/simulation_parameters.py
