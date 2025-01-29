@@ -20,6 +20,22 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 
+
+
+# --------------------- ARGUMENT HANDLING ---------------------
+if len(sys.argv) != 2:
+    logging.error("Usage: python kafka_consumer.py <pod_id>")
+    sys.exit(1)
+
+try:
+    POD_ID = int(sys.argv[1])
+    logging.info(f"Running consumer with POD ID: {POD_ID}")
+except ValueError:
+    logging.error("Invalid POD ID. It must be an integer.")
+    sys.exit(1)
+
+
+
 # --------------------- GCP CREDENTIAL LOADING ---------------------
 GCP_CREDENTIALS = None
 GCP_CRED_PATH = "/secrets/gcp_cred.json"
@@ -41,6 +57,7 @@ except Exception as e:
 _consumer = KafkaConsumer(
     "simulation-parameters",
     bootstrap_servers="kafka-internal:9092",
+    group_id='shared-consumer-group',
     value_deserializer=lambda v: json.loads(v.decode("utf-8")),
 )
 
@@ -269,7 +286,10 @@ def run_navier_stokes_solver(sim_params: SimulationParameters) :
     # Plot if completed successfully & data is finite
     if step == N_ITERATIONS and np.all(np.isfinite(u_final)) and np.all(np.isfinite(v_final)) and np.all(np.isfinite(p_final)):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        plot_filename = f"{RESULTS_DIR}/simulation_plot_{timestamp}.png"
+        pod_prefix = f"pod-{POD_ID}_"
+        plot_filename = f"{RESULTS_DIR}/{pod_prefix}simulation_plot_{timestamp}.png"
+        gif_filename = f"{RESULTS_DIR}/{pod_prefix}simulation_animation_{timestamp}.gif"
+
 
         if do_plot:
             logging.info("Generating initial & final states plot.")
@@ -319,7 +339,8 @@ def run_navier_stokes_solver(sim_params: SimulationParameters) :
 
             # Make the figure layout tight but keep axes, labels, ticks
             plt.tight_layout()
-
+            plt.title(f"Simulation Results (Pod {POD_ID})")
+            
             plt.savefig(plot_filename)
             logging.info(f"Saved initial/final plot at '{plot_filename}'.")
 

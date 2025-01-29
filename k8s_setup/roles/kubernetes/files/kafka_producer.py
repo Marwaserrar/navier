@@ -12,6 +12,9 @@ producer = KafkaProducer(
     value_serializer=lambda v: json.dumps(v).encode("utf-8")
 )
 
+# Fixed parameters
+FIXED_ITERATIONS = 1000 
+
 def main():
     """
     Randomizes simulation parameters while ensuring T = DT * N_ITERATIONS exactly.
@@ -39,7 +42,6 @@ def main():
     dt_max_diffusion = 0.5 * (dx ** 2) / KINEMATIC_VISCOSITY
 
     # 7. Define a CFL-like condition for advection (assuming a characteristic velocity U)
-    #    For simplicity, assume U = 1.0 m/s; adjust as necessary
     U = 1.0  # m/s
     CFL = 0.5  # CFL number
     dt_max_advection = CFL * dx / U
@@ -50,20 +52,12 @@ def main():
     # 9. Randomize DT within [0.2 * dt_max, 0.8 * dt_max]
     DT = round(random.uniform(0.2 * dt_max, 0.8 * dt_max), 6)
 
-    # 10. Define total simulation time T in [4.0, 6.0] seconds
-    #     Alternatively, you can fix T or randomize within a different range
-    T = round(random.uniform(4.0, 6.0), 6)
+    # 10. Compute T based on fixed iterations
+    T = round(DT * FIXED_ITERATIONS, 6)
 
-    # 11. Compute N_ITERATIONS to satisfy T = DT * N_ITERATIONS exactly
-    #     N_ITERATIONS must be an integer, so we calculate it as follows:
-    N_ITERATIONS = math.ceil(T / DT)  # Ensure T >= DT * N_ITERATIONS
-
-    # 12. Adjust T to be exactly DT * N_ITERATIONS
-    T_final = round(DT * N_ITERATIONS, 6)
-
-    # 13. Create SimulationParameters instance
+    # 11. Create SimulationParameters instance
     params = SimulationParameters(
-        T=T_final,
+        T=T,
         Lx=Lx,
         Ly=Ly,
         Nx=Nx,
@@ -71,19 +65,19 @@ def main():
         KINEMATIC_VISCOSITY=KINEMATIC_VISCOSITY,
         DENSITY=DENSITY,
         DT=DT,
-        N_ITERATIONS=N_ITERATIONS,
-        gif=False,  # Set to True if you want GIFs
-        plot=True   # Set to False to disable plotting
+        N_ITERATIONS=FIXED_ITERATIONS, 
+        gif=False,
+        plot=True
     )
 
-    # 14. Print parameters for debugging
-    print("Generated randomized simulation parameters (with T = DT * N_ITERATIONS):")
+    # 12. Print parameters for debugging
+    print("Generated randomized simulation parameters (with fixed iterations):")
     print(json.dumps(params.__dict__, indent=4))
 
-    # 15. Send parameters to Kafka topic 'simulation-parameters'
+    # 13. Send parameters to Kafka topic 'simulation-parameters'
     producer.send("simulation-parameters", value=params.__dict__)
     producer.flush()
-    print("Randomized simulation parameters sent to the Kafka topic: 'simulation-parameters'.")
+    print("Parameters sent to Kafka topic: 'simulation-parameters'.")
 
 if __name__ == "__main__":
     main()

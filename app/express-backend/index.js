@@ -10,60 +10,79 @@ const port = 5000;
 // Read the SERVER_ADDRESS from environment variables
 const serverAddress = process.env.SERVER_ADDRESS || 'localhost';
 
-// Configure CORS to allow requests from the SERVER_ADDRESS
-app.use(
-  cors()
-);
+// Configure CORS to allow requests from any origin
+app.use(cors());
 
 // GCP Storage Client
 const storage = new Storage({
   keyFilename: '/secrets/key-file.json', // Path to the mounted service account key file
 });
 
-const bucketName = 'state-sdtd-1'; // Replace with your GCP bucket name
+const bucketName = 'state-sdtd-1'; // Replace with your actual GCP bucket name
 
-// Route to fetch the latest image/GIF from the GCP bucket
-app.get('/api/image', async (req, res) => {
+/**
+ * Fetch the latest image for a given pod ID from the GCP bucket.
+ * @param {number} podId - The pod number (1 to 5).
+ */
+const getLatestPodImage = async (podId) => {
   try {
-    // List files in the bucket
+    // List all files in the bucket
     const [files] = await storage.bucket(bucketName).getFiles();
 
     if (!files.length) {
-      return res.status(404).send('No files found in the bucket.');
+      throw new Error('No files found in the bucket.');
     }
 
-    // Sort files by creation time (newest first)
-    files.sort((a, b) => new Date(b.metadata.timeCreated) - new Date(a.metadata.timeCreated));
+    // Filter files based on the pod prefix (e.g., "pod-1_simulation_plot_")
+    const podPrefix = `pod-${podId}_simulation_plot_`;
+    const podFiles = files.filter(file => file.name.startsWith(podPrefix));
 
-    // Get the latest file
-    const latestFile = files[0];
+    if (!podFiles.length) {
+      throw new Error(`No images found for pod-${podId}`);
+    }
+
+    // Sort by timestamp (descending) to get the latest
+    podFiles.sort((a, b) => new Date(b.metadata.timeCreated) - new Date(a.metadata.timeCreated));
+
+    return podFiles[0]; // Return the latest file
+  } catch (err) {
+    console.error(`Error fetching latest image for pod-${podId}:`, err.message);
+    return null;
+  }
+};
+
+// Define 5 endpoints to fetch the latest image for each pod
+[1, 2, 3, 4, 5].forEach(podId => {
+  app.get(`/api/image/${podId}`, async (req, res) => {
+    const latestFile = await getLatestPodImage(podId);
+
+    if (!latestFile) {
+      return res.status(404).send(`No image found for pod-${podId}`);
+    }
+
+    // Retrieve file from GCP
     const file = storage.bucket(bucketName).file(latestFile.name);
 
-    // Fetch file metadata to determine content type
+    // Fetch file metadata
     const [metadata] = await file.getMetadata();
     const contentType = metadata.contentType || 'application/octet-stream';
 
-    // Set appropriate headers
+    // Set headers for the response
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `inline; filename="${path.basename(latestFile.name)}"`);
 
     // Create a read stream and pipe it to the response
     const readStream = file.createReadStream();
 
-    // Handle stream errors
     readStream.on('error', (err) => {
-      console.error('Error reading file from GCP bucket:', err);
+      console.error(`Error reading file from GCP for pod-${podId}:`, err);
       res.status(500).send('Internal Server Error');
     });
 
-    // Pipe the read stream to the response
     readStream.pipe(res);
-  } catch (err) {
-    console.error('Error fetching image from GCP bucket:', err);
-    res.status(500).send('Internal Server Error');
-  }
+  });
 });
 
 app.listen(port, '0.0.0.0', () => {
-    console.log(`Backend server listening on http://0.0.0.0:${port}`);
-  });
+  console.log(`Backend server listening on http://0.0.0.0:${port}`);
+});
