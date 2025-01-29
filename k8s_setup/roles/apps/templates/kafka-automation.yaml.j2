@@ -69,7 +69,7 @@ spec:
           echo "Starting producer loop..." &&
           while true; do
             python kafka_producer.py
-            sleep 15
+            sleep 2
           done
       volumeMounts:
         - name: scripts-volume
