@@ -3,6 +3,9 @@
 
 - name: integrate kafka
   import_tasks: kafka.yaml
+
+- name: create kafka topic
+  import_tasks: kafka-create-topic
   
 - name: Render kafka-automation.yaml locally
   ansible.builtin.template:
