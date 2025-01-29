@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: express-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: express-backend
+  template:
+    metadata:
+      labels:
+        app: express-backend
+    spec:
+      containers:
+      - name: express-backend
+        image: marwa390/backend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+          - name: gcp-key-volume
+            mountPath: /secrets/key-file.json
+            subPath: key-file.json
+            readOnly: true
+      volumes:
+        - name: gcp-key-volume
+          secret:
+            secretName: gcp-key-secret

@@ -1,0 +1,44 @@
+# k8s_setup/roles/apps/tasks/frontend-backend.yaml
+- name: Copy frontend manifests to control-plane
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../app/manifests/frontend-deployment.yaml"
+    dest: /tmp/frontend-deployment.yaml
+  when: inventory_hostname in groups['control-plane']
+
+- name: Copy frontend service manifest to control-plane
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../app/manifests/frontend-service.yaml"
+    dest: /tmp/frontend-service.yaml
+  when: inventory_hostname in groups['control-plane']
+
+- name: Copy backend manifests to control-plane
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../app/manifests/backend-deployment.yaml"
+    dest: /tmp/backend-deployment.yaml
+  when: inventory_hostname in groups['control-plane']
+
+- name: Copy backend service manifest to control-plane
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../app/manifests/backend-service.yaml"
+    dest: /tmp/backend-service.yaml
+  when: inventory_hostname in groups['control-plane']
+
+- name: Apply frontend deployment
+  ansible.builtin.shell: |
+    kubectl apply --kubeconfig=/home/asmae/.kube/config --validate=false -f /tmp/frontend-deployment.yaml
+  when: inventory_hostname in groups['control-plane']
+
+- name: Apply frontend service
+  ansible.builtin.shell: |
+    kubectl apply --kubeconfig=/home/asmae/.kube/config --validate=false -f /tmp/frontend-service.yaml
+  when: inventory_hostname in groups['control-plane']
+
+- name: Apply backend deployment
+  ansible.builtin.shell: |
+    kubectl apply --kubeconfig=/home/asmae/.kube/config --validate=false -f /tmp/backend-deployment.yaml
+  when: inventory_hostname in groups['control-plane']
+
+- name: Apply backend service
+  ansible.builtin.shell: |
+    kubectl apply --kubeconfig=/home/asmae/.kube/config --validate=false -f /tmp/backend-service.yaml
+  when: inventory_hostname in groups['control-plane']

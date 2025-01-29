@@ -50,14 +50,14 @@
   changed_when: kubeadm_init.rc == 0
   notify: Apply sysctl changes
 
-# - name: Set up kubeconfig for kubectl on control plane
-#   shell: |
-#     mkdir -p ~/.kube
-#     sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
-#     sudo chown $(id -u):$(id -g) ~/.kube/config
-#   args:
-#     executable: /bin/bash
-#   when: inventory_hostname in groups['control-plane']
+- name: Set up kubeconfig for kubectl on control plane
+  shell: |
+    mkdir -p ~/.kube
+    sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
+    sudo chown $(id -u):$(id -g) ~/.kube/config
+  args:
+    executable: /bin/bash
+  when: inventory_hostname in groups['control-plane']
 
 - name: Create .kube directory
   become: yes
@@ -77,10 +77,115 @@
   when: inventory_hostname in groups['control-plane']
 
 
+
 - name: Verify kubeconfig setup
   stat:
     path: ~/.kube/config
   register: kubeconfig_status
+  when: inventory_hostname in groups['control-plane']
+# Ignore errors if the file is missing
+
+
+- name: Copy key-file.json to master node
+  ansible.builtin.copy:
+    src: /tmp/key-file.json
+    dest: /tmp/key-file.json
+  when: inventory_hostname in groups['control-plane']
+
+
+- name: Verify GCP credentials file exists
+  stat:
+    path: /tmp/key-file.json
+  register: gcp_cred_file
+  when: inventory_hostname in groups['control-plane']
+  ignore_errors: yes  
+
+
+- name: Fail if GCP credentials file is missing
+  fail:
+    msg: "GCP credentials file (/tmp/key-file.json) is missing."
+  when:
+    - inventory_hostname in groups['control-plane']
+    - not gcp_cred_file.stat.exists | default(false)  # Handle missing stat attribute
+
+- name: Create Kubernetes secret for GCP credentials
+  become: yes
+  command: >
+    kubectl create secret generic gcp-key-secret
+    --from-file=key-file.json=/tmp/key-file.json
+    --kubeconfig=/home/asmae/.kube/config
+  when: inventory_hostname in groups['control-plane']
+
+- name: Create Kubernetes secret for GCP credentials
+  become: yes
+  command: >
+    kubectl create secret generic gcp-cred-secret
+    --from-file=gcp_cred.json=/tmp/key-file.json
+    --kubeconfig=/home/asmae/.kube/config
+  when: inventory_hostname in groups['control-plane']
+
+- name: Create directory for Kafka scripts on master
+  file:
+    path: /home/asmae/kafka-scripts
+    state: directory
+    mode: '0755'
+ # when: inventory_hostname in groups['control-plane']
+
+
+- name: Copy simulation_parameters.py to all nodes
+  copy:
+    src: files/simulation_parameters.py
+    dest: /home/asmae/kafka-scripts/simulation_parameters.py
+    mode: '0644'
+
+- name: Copy kafka_producer.py to all nodes
+  copy:
+    src: files/kafka_producer.py
+    dest: /home/asmae/kafka-scripts/kafka_producer.py
+    mode: '0644'
+
+- name: Copy kafka_consumer.py to all nodes
+  copy:
+    src: files/kafka_consumer.py
+    dest: /home/asmae/kafka-scripts/kafka_consumer.py
+    mode: '0644'
+
+- name: Get the public IP address of the master node
+  shell: |
+    curl -s ifconfig.co
+  args:
+    executable: /bin/bash
+  when: inventory_hostname in groups['control-plane']
+  register: master_public_ip
+
+- name: Print the obtained public IP address
+  debug:
+    msg: "Obtained public IP address of the master node: {{ master_public_ip.stdout }}"
+  when: inventory_hostname in groups['control-plane']
+
+- name: Ensure the environment file directory exists
+  file:
+    path: /etc/kubernetes
+    state: directory
+    mode: '0755'
+  when: inventory_hostname in groups['control-plane']
+
+- name: Print the path of the environment file directory
+  debug:
+    msg: "Environment file directory: /etc/kubernetes"
+  when: inventory_hostname in groups['control-plane']
+
+- name: Store the master node public IP address in an environment file
+  lineinfile:
+    path: /etc/kubernetes/env.conf
+    line: "SERVER_ADDRESS={{ master_public_ip.stdout }}"
+    create: yes
+    mode: '0644'
+  when: inventory_hostname in groups['control-plane']
+
+- name: Print the stored public IP address in the environment file
+  debug:
+    msg: "Stored public IP address in /etc/kubernetes/env.conf: SERVER_ADDRESS={{ master_public_ip.stdout }}"
   when: inventory_hostname in groups['control-plane']
 
 # - name: Fail if kubeconfig is not set up correctly

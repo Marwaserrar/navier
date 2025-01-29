@@ -15,40 +15,49 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-    
       - name: Log in to DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker Image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/mock-app:${{ github.run_number }} ./app
+      - name: Build Frontend Docker Image
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/frontend:latest ./app/frontend
+
+      - name: Build Backend Docker Image
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/backend:latest ./app/express-backend
 
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.18.3
-      
-      - name: Scan Docker Image with Trivy
-        run: |
-           trivy image --severity HIGH,CRITICAL  ${{ secrets.DOCKER_USERNAME }}/mock-app:${{ github.run_number }}
 
-      - name: Push Docker Image to DockerHub
-        # if: success() 
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/mock-app:${{ github.run_number }}
+      - name: Scan Frontend Docker Image with Trivy
+        run: |
+          trivy image --severity HIGH,CRITICAL ${{ secrets.DOCKER_USERNAME }}/frontend:latest
+
+      - name: Scan Backend Docker Image with Trivy
+        run: |
+          trivy image --severity HIGH,CRITICAL ${{ secrets.DOCKER_USERNAME }}/backend:latest
+
+      - name: Push Frontend Docker Image to DockerHub
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/frontend:latest
+        
+
+      - name: Push Backend Docker Image to DockerHub
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/backend:latest
 
       - name: Update Image Version in Kubernetes Manifests
-        # if: success() 
         run: |
-          find app/manifests/ -type f -name "*.yaml" -exec sed -i 's|image: ${{ secrets.DOCKER_USERNAME }}/mock-app:.*|image: ${{ secrets.DOCKER_USERNAME }}/mock-app:${{ github.run_number }}|g' {} \;
+          find app/manifests/ -type f -name "*.yaml" -exec sed -i 's|image: ${{ secrets.DOCKER_USERNAME }}/frontend:.*|image: ${{ secrets.DOCKER_USERNAME }}/frontend:latest|g' {} \;
+          find app/manifests/ -type f -name "*.yaml" -exec sed -i 's|image: ${{ secrets.DOCKER_USERNAME }}/backend:.*|image: ${{ secrets.DOCKER_USERNAME }}/backend:latest|g' {} \;
 
       - name: Commit and push if there are changes
         run: |
           git config --global user.name 'GitHub Actions'
           git config --global user.email 'actions@github.com'
           git add app/manifests/
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update image version to ${{ github.run_number }}" && git push)
-
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update image versions to ${{ github.run_number }}" && git push)
+  
   cluster_setup:
     runs-on: ubuntu-latest
     steps:
@@ -60,10 +69,12 @@ jobs:
         with:
           terraform_version: 1.5.0
 
+      - name: Initialize Terraform
+        run: terraform init -upgrade
+        shell: bash
+
       - name: Setup Ansible
         run: sudo apt-get update && sudo apt-get install -y ansible
-
-
 
       - name: Add SSH Private Key
         run: |
@@ -82,6 +93,45 @@ jobs:
           mkdir -p /tmp/.ssh
           echo "${{ secrets.TF_PUB }}" > /tmp/.ssh/gcp_key.pub
           chmod 644 /tmp/.ssh/gcp_key.pub
+        shell: bash
+
+      - name: Check if file exists
+        run: |
+          FILE=/tmp/key-file.json
+          if [ -f "$FILE" ]; then
+            echo "File $FILE exists."
+          else
+            echo "File $FILE does not exist."
+          fi
+
+          DIRECTORY=~/.ssh
+          if [ -d "$DIRECTORY" ]; then
+            echo "Directory $DIRECTORY exists."
+          else
+            echo "Directory $DIRECTORY does not exist."
+          fi
+        shell: bash
+
+      - name: Upload GCP credentials as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: gcp-credentials
+          path: /tmp/key-file.json
+
+      - name: Download GCP credentials artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: gcp-credentials
+          path: /tmp/
+
+      - name: Verify downloaded file
+        run: |
+          if [ -f "/tmp/key-file.json" ]; then
+            echo "GCP credentials available for Ansible."
+          else
+            echo "Error: GCP credentials not available for Ansible."
+            exit 1
+          fi
         shell: bash
 
       - name: set it up

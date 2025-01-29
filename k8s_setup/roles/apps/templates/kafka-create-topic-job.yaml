@@ -1,0 +1,35 @@
+# kafka-create-topic-job.yaml
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kafka-create-topic
+spec:
+  template:
+    metadata:
+      name: kafka-create-topic
+    spec:
+      containers:
+        - name: kafka-create-topic
+          image: apache/kafka:3.8.1
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Waiting for Kafka to be ready..."
+              # Install netcat for connectivity check
+              apt-get update && apt-get install -y netcat
+              
+              # Wait until Kafka is reachable on kafka-internal:9092
+              while ! nc -z kafka-internal 9092; do
+                echo "Waiting for Kafka to be available..."
+                sleep 1
+              done
+              
+              echo "Kafka is up. Creating topic 'simulation-parameters' with 5 partitions..."
+              /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-internal:9092 --create \
+                --replication-factor 1 \
+                --partitions 5 \
+                --topic simulation-parameters || echo "Topic already exists."
+              
+              echo "Topic creation completed."
+      restartPolicy: OnFailure

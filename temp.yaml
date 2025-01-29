@@ -1,0 +1,138 @@
+- name: Ensure the br_netfilter module is loaded
+  modprobe:
+    name: br_netfilter
+    state: present
+  when: inventory_hostname in groups['control-plane']
+
+- name: Ensure iptable_filter module is loaded
+  modprobe:
+    name: iptable_filter
+    state: present
+  when: inventory_hostname in groups['control-plane']
+
+- name: Set bridge-nf-call-iptables to 1
+  sysctl:
+    name: net.bridge.bridge-nf-call-iptables
+    value: '1'
+    state: present
+    reload: yes
+  when: inventory_hostname in groups['control-plane']
+
+- name: Make bridge-nf-call-iptables persistent across reboots
+  lineinfile:
+    path: /etc/sysctl.conf
+    line: "net.bridge.bridge-nf-call-iptables = 1"
+    create: yes
+  when: inventory_hostname in groups['control-plane']
+
+- name: Check if /etc/kubernetes exists
+  stat:
+    path: /etc/kubernetes
+  register: kubernetes_dir
+  ignore_errors: yes
+  when: inventory_hostname in groups['control-plane']
+
+- name: Reset Kubernetes configuration if previous initialization exists
+  command: kubeadm reset -f
+  when: kubernetes_dir.stat.exists
+  ignore_errors: yes
+  when: inventory_hostname in groups['control-plane']
+
+- name: Initialize Kubernetes control plane
+  shell: |
+      sudo kubeadm init \
+      --pod-network-cidr=192.168.0.0/16 
+  args:
+    executable: /bin/bash
+  when: inventory_hostname in groups['control-plane']
+  register: kubeadm_init
+  failed_when: kubeadm_init.rc != 0
+  changed_when: kubeadm_init.rc == 0
+  notify: Apply sysctl changes
+
+# - name: Set up kubeconfig for kubectl on control plane
+#   shell: |
+#     mkdir -p ~/.kube
+#     sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
+#     sudo chown $(id -u):$(id -g) ~/.kube/config
+#   args:
+#     executable: /bin/bash
+#   when: inventory_hostname in groups['control-plane']
+
+- name: Create .kube directory
+  become: yes
+  become_user: asmae
+  file:
+    path: $HOME/.kube
+    state: directory
+    mode: 0755
+
+- name: Copy admin.conf to User's kube config
+  become: yes
+  copy:
+      src: /etc/kubernetes/admin.conf
+      dest: /home/asmae/.kube/config
+      remote_src: yes
+      owner: asmae
+  when: inventory_hostname in groups['control-plane']
+
+
+- name: Verify kubeconfig setup
+  stat:
+    path: ~/.kube/config
+  register: kubeconfig_status
+  when: inventory_hostname in groups['control-plane']
+
+
+- name: Verify GCP credentials file exists
+  stat:
+    path: /tmp/key-file.json
+  register: gcp_cred_file
+  when: inventory_hostname in groups['control-plane']
+  ignore_errors: yes  # Ignore errors if the file is missing
+
+- name: Fail if GCP credentials file is missing
+  fail:
+    msg: "GCP credentials file (/tmp/key-file.json) is missing."
+  when:
+    - inventory_hostname in groups['control-plane']
+    - not gcp_cred_file.stat.exists | default(false)  # Handle missing stat attribute
+
+- name: Create Kubernetes secret for GCP credentials
+  command: >
+    kubectl create secret generic gcp-cred-secret
+    --from-file=gcp_cred.json=/tmp/key-file.json
+  when: inventory_hostname in groups['control-plane']
+
+- name: Create directory for Kafka scripts on master
+  file:
+    path: /home/asmae/kafka-scripts
+    state: directory
+    mode: '0755'
+  when: inventory_hostname in groups['control-plane']
+
+- name: Copy simulation_parameters.py to master
+  copy:
+    src: templates/simulation_parameters.py
+    dest: /home/asmae/kafka-scripts/simulation_parameters.py
+    mode: '0644'
+  when: inventory_hostname in groups['control-plane']
+
+- name: Copy kafka_producer.py to master
+  copy:
+    src: templates/kafka_producer.py
+    dest: /home/asmae/kafka-scripts/kafka_producer.py
+    mode: '0644'
+  when: inventory_hostname in groups['control-plane']
+
+- name: Copy kafka_consumer.py to master
+  copy:
+    src: templates/kafka_consumer.py
+    dest: /home/asmae/kafka-scripts/kafka_consumer.py
+    mode: '0644'
+  when: inventory_hostname in groups['control-plane']
+
+# - name: Fail if kubeconfig is not set up correctly
+#   fail:
+#     msg: "Kubeconfig was not set up correctly. ~/.kube/config is missing."
+#   when: not kubeconfig_status.stat.exists
