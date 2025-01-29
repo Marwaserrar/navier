@@ -43,14 +43,25 @@ spec:
           value: "CONTROLLER"
         - name: KAFKA_LOG_DIRS
           value: "/tmp/kraft-combined-logs"
-        - name: KAFKA_CREATE_TOPICS
-          value: "simulation-parameters:10:3"
         - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
           value: "1"
         - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
           value: "1"
         - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
           value: "1"
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            echo "Waiting for Kafka to start..."
+            sleep 10
+            echo "Creating topic simulation-parameters with 5 partitions..."
+            /opt/kafka/bin/kafka-topics.sh --create \
+              --bootstrap-server kafka-internal:9092 \
+              --replication-factor 1 \
+              --partitions 5 \
+              --topic simulation-parameters || echo "Topic already exists."
+            echo "Kafka topic simulation-parameters created!"
+            exec /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/server.properties
         volumeMounts:
         - name: kafka-data
           mountPath: /tmp/kraft-combined-logs
