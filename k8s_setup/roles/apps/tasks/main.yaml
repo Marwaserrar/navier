@@ -4,9 +4,6 @@
 - name: integrate kafka
   import_tasks: kafka.yaml
 
-- name: create kafka topic
-  import_tasks: kafka-create-topic
-  
 - name: Render kafka-automation.yaml locally
   ansible.builtin.template:
     src: kafka-automation.yaml.j2
@@ -35,6 +32,37 @@
 - name: Apply Kafka automation YAML on control-plane (no validation)
   ansible.builtin.shell: |
     kubectl apply --kubeconfig=/home/asmae/.kube/config --validate=false -f /tmp/kafka-automation.yaml
+  when: inventory_hostname in groups['control-plane']
+
+
+- name: Render Kafka Topic Creation Job YAML Locally
+  ansible.builtin.template:
+    src: kafka-create-topic-job.yaml
+    dest: /tmp/kafka-create-topic-job.yaml
+  delegate_to: localhost
+  run_once: true
+
+- name: Log First 100 Lines of the Rendered Kafka Topic Creation Job YAML
+  ansible.builtin.shell: "head -n 100 /tmp/kafka-create-topic-job.yaml"
+  delegate_to: localhost
+  run_once: true
+  register: rendered_kafka_job_yaml_head
+
+- name: Display Rendered Kafka Topic Creation Job YAML Head
+  ansible.builtin.debug:
+    msg: "{{ rendered_kafka_job_yaml_head.stdout }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Copy Rendered Kafka Topic Creation Job YAML to Control-Plane
+  ansible.builtin.copy:
+    src: /tmp/kafka-create-topic-job.yaml
+    dest: /tmp/kafka-create-topic-job.yaml
+  when: inventory_hostname in groups['control-plane']
+
+- name: Apply Kafka Topic Creation Job YAML on Control-Plane (No Validation)
+  ansible.builtin.shell: |
+    kubectl apply --kubeconfig=/home/asmae/.kube/config --validate=false -f /tmp/kafka-create-topic-job.yaml
   when: inventory_hostname in groups['control-plane']
 
 - name: Deploy Frontend and Backend Applications
