@@ -1,6 +1,6 @@
 terraform {
    backend "gcs" {
-    bucket = "state-sdtd-1"
+    bucket = "bucket-marwa"
   }
   required_providers {
     google = {
@@ -17,7 +17,7 @@ terraform {
 
 provider "google" {
   credentials = file("/tmp/key-file.json")
-  project     = "neon-runway-448317-q0"
+  project     = "silver-course-448318-r7"
   region      = "europe-west4"
 }
 
@@ -84,7 +84,7 @@ resource "google_compute_instance" "k8s_nodes" {
   }
 
   service_account {
-  email  = "204949976738-compute@developer.gserviceaccount.com"
+  email  = "marwa-364@silver-course-448318-r7.iam.gserviceaccount.com"
   scopes = ["cloud-platform"] 
 }
 
