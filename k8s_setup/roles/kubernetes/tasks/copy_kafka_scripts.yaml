@@ -8,21 +8,21 @@
 
 - name: Copy simulation_parameters.py to worker nodes
   copy:
-    src: /home/asmae/kafka-scripts/simulation_parameters.py
+    src: files/simulation_parameters.py
     dest: /home/asmae/kafka-scripts/simulation_parameters.py
     mode: '0644'
   when: inventory_hostname in groups['workers']
 
 - name: Copy kafka_producer.py to worker nodes
   copy:
-    src: /home/asmae/kafka-scripts/kafka_producer.py
+    src: files/kafka_producer.py
     dest: /home/asmae/kafka-scripts/kafka_producer.py
     mode: '0644'
   when: inventory_hostname in groups['workers']
 
 - name: Copy kafka_consumer.py to worker nodes
   copy:
-    src: /home/asmae/kafka-scripts/kafka_consumer.py
+    src: files/kafka_consumer.py
     dest: /home/asmae/kafka-scripts/kafka_consumer.py
     mode: '0644'
   when: inventory_hostname in groups['workers']
