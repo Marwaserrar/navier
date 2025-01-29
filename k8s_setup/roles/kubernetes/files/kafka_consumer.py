@@ -350,7 +350,7 @@ def run_navier_stokes_solver(sim_params: SimulationParameters) :
             upload_to_gcp(
                 bucket_name=BUCKET_NAME,
                 source_file_name=plot_filename,
-                destination_blob_name=f"simulation_results/simulation_plot_{timestamp}.png",
+                destination_blob_name=f"simulation_results/{pod_prefix}simulation_plot_{timestamp}.png",
             )
 
     # GIF generation if requested
@@ -395,7 +395,7 @@ def run_navier_stokes_solver(sim_params: SimulationParameters) :
             upload_to_gcp(
                 bucket_name=BUCKET_NAME,
                 source_file_name=gif_filename,
-                destination_blob_name=f"simulation_results/simulation_animation_{timestamp}.gif",
+                destination_blob_name=f"simulation_results/{pod_prefix}simulation_animation_{timestamp}.gif",
             )
 
     logging.info("End of simulation.")   
