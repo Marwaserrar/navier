@@ -131,26 +131,26 @@
     mode: '0755'
   when: inventory_hostname in groups['control-plane']
 
-- name: Copy simulation_parameters.py to master
+- name: Copy simulation_parameters.py to all hosts
   copy:
     src: files/simulation_parameters.py
     dest: /home/asmae/kafka-scripts/simulation_parameters.py
     mode: '0644'
-  when: inventory_hostname in groups['control-plane']
+  hosts: all
 
-- name: Copy kafka_producer.py to master
+- name: Copy kafka_producer.py to all hosts
   copy:
     src: files/kafka_producer.py
     dest: /home/asmae/kafka-scripts/kafka_producer.py
     mode: '0644'
-  when: inventory_hostname in groups['control-plane']
+  hosts: all
 
-- name: Copy kafka_consumer.py to master
+- name: Copy kafka_consumer.py to all hosts
   copy:
     src: files/kafka_consumer.py
     dest: /home/asmae/kafka-scripts/kafka_consumer.py
     mode: '0644'
-  when: inventory_hostname in groups['control-plane']
+  hosts: all
 
 - name: Get the public IP address of the master node
   shell: |
