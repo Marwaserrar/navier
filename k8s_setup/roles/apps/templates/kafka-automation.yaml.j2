@@ -122,7 +122,7 @@ spec:
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
           mkdir -p /app && cd /app &&
           cp /scripts/*.py . &&
-          python kafka_consumer.py
+          python kafka_consumer.py 1
       volumeMounts:
         - name: scripts-volume
           mountPath: /scripts
@@ -173,7 +173,7 @@ spec:
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
           mkdir -p /app && cd /app &&
           cp /scripts/*.py . &&
-          python kafka_consumer.py
+          python kafka_consumer.py 2
       volumeMounts:
         - name: scripts-volume
           mountPath: /scripts
@@ -224,7 +224,7 @@ spec:
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
           mkdir -p /app && cd /app &&
           cp /scripts/*.py . &&
-          python kafka_consumer.py
+          python kafka_consumer.py 3
       volumeMounts:
         - name: scripts-volume
           mountPath: /scripts
@@ -275,7 +275,7 @@ spec:
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
           mkdir -p /app && cd /app &&
           cp /scripts/*.py . &&
-          python kafka_consumer.py
+          python kafka_consumer.py 4
       volumeMounts:
         - name: scripts-volume
           mountPath: /scripts
@@ -326,7 +326,7 @@ spec:
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
           mkdir -p /app && cd /app &&
           cp /scripts/*.py . &&
-          python kafka_consumer.py
+          python kafka_consumer.py 5
       volumeMounts:
         - name: scripts-volume
           mountPath: /scripts
