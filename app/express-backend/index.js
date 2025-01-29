@@ -34,7 +34,7 @@ const getLatestPodImage = async (podId) => {
     }
 
     // Filter files based on the pod prefix (e.g., "pod-1_simulation_plot_")
-    const podPrefix = `pod-${podId}_simulation_plot_`;
+    const podPrefix = `simulation_results/pod-${podId}_simulation_plot_`;
     const podFiles = files.filter(file => file.name.startsWith(podPrefix));
 
     if (!podFiles.length) {
