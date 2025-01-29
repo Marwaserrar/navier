@@ -37,3 +37,6 @@
   fail:
     msg: "Failed to join worker node to cluster"
   when: inventory_hostname in groups['workers'] and join_result.rc != 0
+
+
+  

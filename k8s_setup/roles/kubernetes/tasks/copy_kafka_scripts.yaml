@@ -1,0 +1,46 @@
+---
+- name: Ensure Kafka scripts directory exists on worker nodes
+  file:
+    path: /home/asmae/kafka-scripts
+    state: directory
+    mode: '0755'
+  when: inventory_hostname in groups['workers']
+
+- name: Copy simulation_parameters.py to worker nodes
+  copy:
+    src: /home/asmae/kafka-scripts/simulation_parameters.py
+    dest: /home/asmae/kafka-scripts/simulation_parameters.py
+    mode: '0644'
+  when: inventory_hostname in groups['workers']
+
+- name: Copy kafka_producer.py to worker nodes
+  copy:
+    src: /home/asmae/kafka-scripts/kafka_producer.py
+    dest: /home/asmae/kafka-scripts/kafka_producer.py
+    mode: '0644'
+  when: inventory_hostname in groups['workers']
+
+- name: Copy kafka_consumer.py to worker nodes
+  copy:
+    src: /home/asmae/kafka-scripts/kafka_consumer.py
+    dest: /home/asmae/kafka-scripts/kafka_consumer.py
+    mode: '0644'
+  when: inventory_hostname in groups['workers']
+
+# Optional verification tasks
+- name: Verify Kafka scripts on worker nodes
+  stat:
+    path: "{{ item }}"
+  with_items:
+    - /home/asmae/kafka-scripts/simulation_parameters.py
+    - /home/asmae/kafka-scripts/kafka_producer.py
+    - /home/asmae/kafka-scripts/kafka_consumer.py
+  register: kafka_scripts
+  when: inventory_hostname in groups['workers']
+
+- name: Fail if any Kafka script is missing
+  fail:
+    msg: "Missing Kafka script: {{ item.item }}"
+  when: not item.stat.exists
+  with_items: "{{ kafka_scripts.results }}"
+  when: inventory_hostname in groups['workers']

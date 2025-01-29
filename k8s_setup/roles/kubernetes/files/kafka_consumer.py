@@ -13,18 +13,16 @@ from datetime import datetime
 
 from simulation_parameters import SimulationParameters
 
-# Configure logging
+# --------------------- CONFIGURE LOGGING ---------------------
 logging.basicConfig(
-    level=logging.DEBUG,  # Set to DEBUG for more granular logs
+    level=logging.DEBUG,  # Set to DEBUG for detailed logs
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler()]
 )
 
-##############################################################################
-# 1. Load GCP credentials from the mounted JSON file
-##############################################################################
+# --------------------- GCP CREDENTIAL LOADING ---------------------
 GCP_CREDENTIALS = None
-GCP_CRED_PATH = "/secrets/gcp_cred.json"  # Path to the mounted JSON key file
+GCP_CRED_PATH = "/secrets/gcp_cred.json"
 
 try:
     logging.debug(f"Attempting to load GCP credentials from {GCP_CRED_PATH}.")
@@ -39,9 +37,7 @@ except json.JSONDecodeError:
 except Exception as e:
     logging.error(f"Failed to load GCP credentials: {e}")
 
-##############################################################################
-# 2. Kafka and GCP Settings
-##############################################################################
+# ----------------------- KAFKA SETTINGS -----------------------
 _consumer = KafkaConsumer(
     "simulation-parameters",
     bootstrap_servers="kafka-internal:9092",
@@ -49,254 +45,348 @@ _consumer = KafkaConsumer(
 )
 
 BUCKET_NAME = "state-sdtd-1"
-
-# Ensure the results directory exists
 RESULTS_DIR = "/tmp/simulation_results"
 os.makedirs(RESULTS_DIR, exist_ok=True)
 logging.debug(f"Ensured that results directory '{RESULTS_DIR}' exists.")
 
-##############################################################################
-# 3. GCP Upload Function (Uses in-memory credentials)
-##############################################################################
+# ------------------- GCP UPLOAD FUNCTION -------------------
 def upload_to_gcp(bucket_name, source_file_name, destination_blob_name):
     """Uploads a file to a GCP bucket using in-memory credentials."""
     logging.info(f"Attempting to upload '{source_file_name}' to bucket '{bucket_name}' as '{destination_blob_name}'.")
-
     if not GCP_CREDENTIALS:
         logging.error("No GCP credentials available; skipping upload.")
         return
-
     try:
         client = storage.Client(credentials=GCP_CREDENTIALS)
         bucket = client.bucket(bucket_name)
         blob = bucket.blob(destination_blob_name)
         blob.upload_from_filename(source_file_name)
         logging.info(f"Successfully uploaded '{source_file_name}' to '{destination_blob_name}' in bucket '{bucket_name}'.")
-
-        # Verify upload by listing the blob
         if blob.exists():
             logging.info(f"Verified that '{destination_blob_name}' exists in bucket '{bucket_name}'.")
         else:
-            logging.error(f"Uploaded blob '{destination_blob_name}' does not exist in bucket '{bucket_name}'.")
+            logging.error(f"Blob '{destination_blob_name}' not found after upload!")
     except Exception as e:
         logging.error(f"Failed to upload '{source_file_name}' to GCP: {e}")
-
-##############################################################################
-# 4. Numerical Methods
-##############################################################################
+# --------------------- NAVIER-STOKES UTILS ----------------------
 def central_diff_x(f, dx):
     cdx = np.zeros_like(f)
     cdx[1:-1, 1:-1] = (f[1:-1, 2:] - f[1:-1, 0:-2]) / (2 * dx)
+    logging.debug("Computed central difference in x-direction.")
     return cdx
 
 def central_diff_y(f, dy):
     cdy = np.zeros_like(f)
     cdy[1:-1, 1:-1] = (f[2:, 1:-1] - f[0:-2, 1:-1]) / (2 * dy)
+    logging.debug("Computed central difference in y-direction.")
     return cdy
 
 def laplace(f, dx, dy):
-    """5-point stencil for Laplacian."""
     lap = np.zeros_like(f)
     lap[1:-1, 1:-1] = (
-        f[1:-1, 0:-2]
-        + f[1:-1, 2:]
-        + f[0:-2, 1:-1]
-        + f[2:, 1:-1]
-        - 4 * f[1:-1, 1:-1]
-    ) / (dx * dy)
+        f[1:-1, 0:-2] +
+        f[1:-1, 2:]   +
+        f[0:-2, 1:-1] +
+        f[2:, 1:-1]   -
+        4 * f[1:-1, 1:-1]
+    ) / (dx**2)  # Corrected scaling
+    logging.debug("Computed Laplacian.")
     return lap
 
 def open_top_lid_BC_velocity(u, v):
-    """Boundary condition that sets the top lid (u at y=-1) to velocity 1.0."""
-    u[-1, :] = 1.0
+    u[-1, :] = 1.0      # Lid velocity
+    v[-1, :] = 0.0      # Lid has no vertical velocity
+    logging.debug("Applied open top lid boundary condition for velocity.")
     return u, v
 
 def homogeneous_boundary_condition_velocity(u, v):
-    """Zero velocity on the other boundaries."""
-    u[0, :], u[-1, :], u[:, 0], u[:, -1] = 0.0, 0.0, 0.0, 0.0
-    v[0, :], v[-1, :], v[:, 0], v[:, -1] = 0.0, 0.0, 0.0, 0.0
+    u[0, :] = 0.0       # Bottom boundary
+    u[-1, :] = 0.0      # Top boundary (already set by lid)
+    u[:, 0] = 0.0       # Left boundary
+    u[:, -1] = 0.0      # Right boundary
+    v[0, :] = 0.0
+    v[-1, :] = 0.0      # Top boundary
+    v[:, 0] = 0.0
+    v[:, -1] = 0.0
+    logging.debug("Applied homogeneous boundary conditions for velocity.")
     return u, v
 
 BOUNDARY_CONDITION = open_top_lid_BC_velocity
 
-##############################################################################
-# 5. Navier-Stokes Solver
-##############################################################################
-def run_navier_stokes_solver(sim_params: SimulationParameters):
-    logging.info(f"Starting simulation with parameters: {sim_params}")
+# ------------------- NAVIER-STOKES SOLVER -------------------
+def run_navier_stokes_solver(sim_params: SimulationParameters) :
+    logging.info(f"Starting simulation with parameters:\n{sim_params}")
 
-    # Grid/time setup
+    # Unpack simulation parameters
     dx, dy = sim_params.dx, sim_params.dy
     T, DT = sim_params.T, sim_params.DT
     Lx, Ly = sim_params.Lx, sim_params.Ly
     Nx, Ny = sim_params.Nx, sim_params.Ny
     N_ITERATIONS = sim_params.N_ITERATIONS
-    KINEMATIC_VISCOSITY = sim_params.KINEMATIC_VISCOSITY
-    DENSITY = sim_params.DENSITY
+    nu = sim_params.KINEMATIC_VISCOSITY
+    rho = sim_params.DENSITY
     do_plot = sim_params.plot
     do_gif = sim_params.gif
     n_poisson_iters = sim_params.N_PRESSURE_POISSON_ITERATIONS
 
+    # Create grid
     xs = np.linspace(0.0, Lx, Nx)
     ys = np.linspace(0.0, Ly, Ny)
     X, Y = np.meshgrid(xs, ys)
+    logging.debug(f"Created meshgrid with shape {X.shape}.")
 
-    # Initialize velocity & pressure fields
+    # Initialize velocity & pressure
     u_prev = np.zeros_like(X)
     v_prev = np.zeros_like(X)
     p_prev = np.zeros_like(X)
+    logging.debug("Initialized velocity and pressure fields to zero.")
 
-    # Save initial state for final plotting
+    # Small initial perturbation (optional)
+    center_x, center_y = Nx // 2, Ny // 2
+    u_prev[center_y, center_x] = 0.05
+    v_prev[center_y, center_x] = 0.05
+    logging.debug(f"Introduced perturbation at center ({center_x}, {center_y}) with u=0.05 and v=0.05.")
+
+    # Save initial state
     u_initial = u_prev.copy()
     v_initial = v_prev.copy()
     p_initial = p_prev.copy()
 
-    # Lists for GIF
+    # For optional GIF
     u_list, v_list, p_list = [], [], []
 
-    # Main simulation loop
+    # Convergence tolerance for Pressure Poisson
+    poisson_tol = 1e-4
+
     for step in range(1, N_ITERATIONS + 1):
-        if DT > 0.5 * (dx ** 2) / KINEMATIC_VISCOSITY:
-            raise ValueError("Time step too large for stability.")
+        # Stability check
+        if DT > 0.5 * (dx ** 2) / nu:
+            logging.error("Time step too large for stability condition (DT>0.5*dx^2/nu).")
+            raise ValueError("Time step too large for stability condition (DT>0.5*dx^2/nu).")
 
-        d_u_prev__d_x = central_diff_x(u_prev, dx)
-        d_u_prev__d_y = central_diff_y(u_prev, dy)
-        d_v_prev__d_x = central_diff_x(v_prev, dx)
-        d_v_prev__d_y = central_diff_y(v_prev, dy)
-        laplace_u_prev = laplace(u_prev, dx, dy)
-        laplace_v_prev = laplace(v_prev, dx, dy)
+        # Derivatives
+        dudx = central_diff_x(u_prev, dx)
+        dudy = central_diff_y(u_prev, dy)
+        dvdx = central_diff_x(v_prev, dx)
+        dvdy = central_diff_y(v_prev, dy)
+        lapu = laplace(u_prev, dx, dy)
+        lapv = laplace(v_prev, dx, dy)
+        logging.debug(f"Step {step}: Computed derivatives.")
 
-        # (1) Velocity prediction
-        u_star = u_prev + DT * (
-            -(u_prev * d_u_prev__d_x + v_prev * d_u_prev__d_y)
-            + KINEMATIC_VISCOSITY * laplace_u_prev
-        )
-        v_star = v_prev + DT * (
-            -(u_prev * d_v_prev__d_x + v_prev * d_v_prev__d_y)
-            + KINEMATIC_VISCOSITY * laplace_v_prev
-        )
+        # 1) Velocity prediction
+        u_star = u_prev + DT * (-(u_prev * dudx + v_prev * dudy) + nu * lapu)
+        v_star = v_prev + DT * (-(u_prev * dvdx + v_prev * dvdy) + nu * lapv)
+        logging.debug(f"Step {step}: Predicted velocities (u_star, v_star).")
 
+        # Finite checks
+        if not (np.isfinite(u_star).all() and np.isfinite(v_star).all()):
+            logging.error(f"Numerical instability after velocity prediction at step {step}.")
+            break
+
+        # BCs for predicted velocities
         u_star, v_star = homogeneous_boundary_condition_velocity(u_star, v_star)
         u_star, v_star = BOUNDARY_CONDITION(u_star, v_star)
+        logging.debug(f"Step {step}: Applied BCs to predicted velocities.")
 
-        # (2) Pressure Poisson
+        # 2) Pressure Poisson
         rhs = (central_diff_x(u_star, dx) + central_diff_y(v_star, dy)) / DT
-        for _ in range(n_poisson_iters):
-            p_prev[1:-1, 1:-1] = 0.25 * (
-                p_prev[1:-1, 0:-2]
-                + p_prev[1:-1, 2:]
-                + p_prev[0:-2, 1:-1]
-                + p_prev[2:, 1:-1]
-                - dx * dy * rhs[1:-1, 1:-1]
+        logging.debug(f"Step {step}: Computed RHS for pressure Poisson.")
+
+        residual = 1.0
+        poisson_step = 0
+        while residual > poisson_tol and poisson_step < n_poisson_iters:
+            p_new = 0.25 * (
+                p_prev[1:-1, :-2] +
+                p_prev[1:-1, 2:] +
+                p_prev[:-2, 1:-1] +
+                p_prev[2:, 1:-1] -
+                dx**2 * rhs[1:-1, 1:-1]
             )
-            # Neumann boundaries for p
+            residual = np.linalg.norm(p_new - p_prev[1:-1, 1:-1], ord=2)
+            p_prev[1:-1, 1:-1] = p_new
+
+            # Neumann BC for p
             p_prev[:, -1] = p_prev[:, -2]
             p_prev[:, 0] = p_prev[:, 1]
             p_prev[-1, :] = p_prev[-2, :]
             p_prev[0, :] = p_prev[1, :]
 
-        # (3) Velocity correction
-        dp_dx = central_diff_x(p_prev, dx)
-        dp_dy = central_diff_y(p_prev, dy)
-        u_next = u_star - DT / DENSITY * dp_dx
-        v_next = v_star - DT / DENSITY * dp_dy
+            poisson_step += 1
+            if poisson_step % 10 == 0 or poisson_step == 1:
+                logging.debug(f"Step {step}: Poisson iter {poisson_step}, residual={residual:.6f}")
+
+        if poisson_step == n_poisson_iters and residual > poisson_tol:
+            logging.warning(f"Step {step}: Poisson solver not converged (res={residual:.6f}).")
+
+        logging.debug(f"Step {step}: Pressure Poisson solved (res={residual:.6f}).")
+
+        # 3) Velocity correction
+        dpdx = central_diff_x(p_prev, dx)
+        dpdy = central_diff_y(p_prev, dy)
+        u_next = u_star - DT / rho * dpdx
+        v_next = v_star - DT / rho * dpdy
+        logging.debug(f"Step {step}: Corrected velocities (u_next, v_next).")
+
+        if not (np.isfinite(u_next).all() and np.isfinite(v_next).all()):
+            logging.error(f"Numerical instability after velocity correction at step {step}.")
+            break
+
+        # BCs for corrected velocities
+        u_next, v_next = homogeneous_boundary_condition_velocity(u_next, v_next)
+        u_next, v_next = BOUNDARY_CONDITION(u_next, v_next)
+        logging.debug(f"Step {step}: Applied BCs to corrected velocities.")
 
         u_prev, v_prev = u_next, v_next
 
-        # Save for GIF
+        # For GIF
         u_list.append(u_next.copy())
         v_list.append(v_next.copy())
         p_list.append(p_prev.copy())
 
-    # Plot final result
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    plot_filename = f"{RESULTS_DIR}/simulation_plot_{timestamp}.png"
+        # Log ranges
+        if step % 1000 == 0 or step == 1:
+            umin, umax = u_prev.min(), u_prev.max()
+            vmin, vmax = v_prev.min(), v_prev.max()
+            pmin, pmax = p_prev.min(), p_prev.max()
+            logging.info(f"Step {step}/{N_ITERATIONS}: "
+                         f"u=[{umin:.4f}, {umax:.4f}], "
+                         f"v=[{vmin:.4f}, {vmax:.4f}], "
+                         f"p=[{pmin:.4f}, {pmax:.4f}]")
 
-    if do_plot:
-        import matplotlib.pyplot as plt
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5), dpi=100)
+        if not (np.isfinite(u_prev).all() and np.isfinite(v_prev).all() and np.isfinite(p_prev).all()):
+            logging.error(f"Numerical instability at step {step}.")
+            break
 
-        # Initial
-        ax1.set_title("Champ de vitesse et pression initiaux")
-        im1 = ax1.imshow(
-            p_initial, extent=[0, Lx, 0, Ly], origin="lower", cmap="viridis", alpha=0.8
-        )
-        ax1.streamplot(X, Y, u_initial, v_initial, color="black")
-        fig.colorbar(im1, ax=ax1, label="Pression")
-        ax1.set_xlabel("x")
-        ax1.set_ylabel("y")
+    # Final fields
+    p_final = p_prev.copy()
+    u_final = u_prev.copy()
+    v_final = v_prev.copy()
+    logging.debug("Simulation loop completed.")
 
-        # Final
-        p_final = p_prev.copy()
-        u_final = u_prev.copy()
-        v_final = v_prev.copy()
+    if step < N_ITERATIONS:
+        logging.warning(f"Simulation ended early at step {step} due to instability.")
 
-        ax2.set_title("Champ de vitesse et pression finaux")
-        im2 = ax2.imshow(
-            p_final, extent=[0, Lx, 0, Ly], origin="lower", cmap="viridis", alpha=0.8
-        )
-        ax2.streamplot(X, Y, u_final, v_final, color="black")
-        fig.colorbar(im2, ax=ax2, label="Pression")
-        ax2.set_xlabel("x")
-        ax2.set_ylabel("y")
+    # Plot if completed successfully & data is finite
+    if step == N_ITERATIONS and np.all(np.isfinite(u_final)) and np.all(np.isfinite(v_final)) and np.all(np.isfinite(p_final)):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        plot_filename = f"{RESULTS_DIR}/simulation_plot_{timestamp}.png"
 
-        plt.tight_layout()
-        plt.savefig(plot_filename)
-        logging.info(f"Generated initial/final states plot in '{plot_filename}'")
-        plt.close(fig)
+        if do_plot:
+            logging.info("Generating initial & final states plot.")
 
-        # Upload plot to GCP
-        upload_to_gcp(
-            bucket_name=BUCKET_NAME,
-            source_file_name=plot_filename,
-            destination_blob_name=f"simulation_results/simulation_plot_{timestamp}.png",
-        )
+            # Min/max for color consistency
+            p_init_min, p_init_max = p_initial.min(), p_initial.max()
+            p_final_min, p_final_max = p_final.min(), p_final.max()
+            p_min = min(p_init_min, p_final_min)
+            p_max = max(p_init_max, p_final_max)
+            logging.debug(f"Pressure scale: [{p_min}, {p_max}]")
 
-    if do_gif:
-        import matplotlib.pyplot as plt
-        from matplotlib.animation import FuncAnimation
-        fig, ax = plt.subplots(figsize=(8, 5))
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        pressure_im = ax.imshow(
-            p_list[0], extent=[0, Lx, 0, Ly], origin="lower", cmap="viridis", alpha=0.8
-        )
-        plt.colorbar(pressure_im, ax=ax, label="Pression")
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5), dpi=100)
 
-        quiver = ax.quiver(
-            X[::2], Y[::2], u_list[0][::2], v_list[0][::2], scale=1, scale_units="xy", color="black"
-        )
+            # INITIAL PLOT
+            ax1.set_title("Initial Velocity & Pressure")
+            im1 = ax1.imshow(
+                p_initial, extent=[0, Lx, 0, Ly],
+                origin="lower", cmap="viridis", alpha=0.8,
+                vmin=p_min, vmax=p_max
+            )
+            ax1.streamplot(X, Y, u_initial, v_initial, color="black", density=3.0)
+            cbar1 = fig.colorbar(im1, ax=ax1, label="Pressure")
+            ax1.set_xlabel("x")
+            ax1.set_ylabel("y")
+            # Ensure final image fits the axis:
+            ax1.set_xlim([0, Lx])
+            ax1.set_ylim([0, Ly])
 
-        def animate(i):
-            quiver.set_UVC(u_list[i][::2], v_list[i][::2])
-            pressure_im.set_array(p_list[i])
-            ax.set_title(f"Champ de vitesse et pression - Iter {i+1}")
-            return quiver, pressure_im
+            logging.debug("Plotted initial state.")
 
-        anim = FuncAnimation(fig, animate, frames=len(u_list), blit=True, interval=100)
-        gif_filename = f"{RESULTS_DIR}/simulation_animation_{timestamp}.gif"
-        anim.save(gif_filename, writer="pillow")
-        logging.info(f"Generated GIF animation in '{gif_filename}'")
-        plt.close(fig)
+            # FINAL PLOT
+            ax2.set_title("Final Velocity & Pressure")
+            im2 = ax2.imshow(
+                p_final, extent=[0, Lx, 0, Ly],
+                origin="lower", cmap="viridis", alpha=0.8,
+                vmin=p_min, vmax=p_max
+            )
+            ax2.streamplot(X, Y, u_final, v_final, color="black", density=3.0)
+            cbar2 = fig.colorbar(im2, ax=ax2, label="Pressure")
+            ax2.set_xlabel("x")
+            ax2.set_ylabel("y")
+            # Ensure final image fits the axis as well:
+            ax2.set_xlim([0, Lx])
+            ax2.set_ylim([0, Ly])
 
-        # Upload GIF to GCP
-        upload_to_gcp(
-            bucket_name=BUCKET_NAME,
-            source_file_name=gif_filename,
-            destination_blob_name=f"simulation_results/simulation_animation_{timestamp}.gif",
-        )
+            logging.debug("Plotted final state.")
 
-    logging.info("End of simulation.")
+            # Make the figure layout tight but keep axes, labels, ticks
+            plt.tight_layout()
 
+            plt.savefig(plot_filename)
+            logging.info(f"Saved initial/final plot at '{plot_filename}'.")
 
+            # Additional info about saved plot
+            logging.debug(f"Plot file '{plot_filename}' shape: {plt.imread(plot_filename).shape}.")
+
+            upload_to_gcp(
+                bucket_name=BUCKET_NAME,
+                source_file_name=plot_filename,
+                destination_blob_name=f"simulation_results/simulation_plot_{timestamp}.png",
+            )
+
+    # GIF generation if requested
+    if do_gif and step == N_ITERATIONS and np.all(np.isfinite(u_final)) and np.all(np.isfinite(v_final)) and np.all(np.isfinite(p_final)):
+        logging.info("Generating GIF animation.")
+        if len(u_list) == 0 or len(p_list) == 0:
+            logging.error("No data for GIF generation.")
+        else:
+            all_p = np.concatenate([p.ravel() for p in p_list])
+            p_min, p_max = all_p.min(), all_p.max()
+            logging.debug(f"GIF pressure scale: [{p_min}, {p_max}]")
+
+            fig, ax = plt.subplots(figsize=(8, 5))
+            ax.set_xlabel("x")
+            ax.set_ylabel("y")
+
+            pressure_im = ax.imshow(
+                p_list[0], extent=[0, Lx, 0, Ly],
+                origin="lower", cmap="viridis", alpha=0.8,
+                vmin=p_min, vmax=p_max
+            )
+            cb = plt.colorbar(pressure_im, ax=ax, label="Pressure")
+            quiver = ax.quiver(
+                X[::2, ::2], Y[::2, ::2],
+                u_list[0][::2, ::2], v_list[0][::2, ::2],
+                scale=1, scale_units="xy", color="black"
+            )
+
+            def animate(i):
+                quiver.set_UVC(u_list[i][::2, ::2], v_list[i][::2, ::2])
+                pressure_im.set_array(p_list[i])
+                ax.set_title(f"Velocity & Pressure - Iter {i+1}")
+                return quiver, pressure_im
+
+            anim = FuncAnimation(fig, animate, frames=len(u_list), blit=True, interval=100)
+            gif_filename = f"{RESULTS_DIR}/simulation_animation_{timestamp}.gif"
+            anim.save(gif_filename, writer="pillow")
+            logging.info(f"Saved GIF animation at '{gif_filename}'.")
+
+            logging.debug(f"GIF file '{gif_filename}' size: {os.path.getsize(gif_filename)} bytes.")
+
+            upload_to_gcp(
+                bucket_name=BUCKET_NAME,
+                source_file_name=gif_filename,
+                destination_blob_name=f"simulation_results/simulation_animation_{timestamp}.gif",
+            )
+
+    logging.info("End of simulation.")   
+    # ------------------- MAIN FUNCTION -------------------
 def main():
     logging.info("Kafka consumer started. Waiting for simulation parameters...")
-    from simulation_parameters import SimulationParameters
-
-    for message in _consumer:
+    for msg in _consumer:
         try:
-            params = SimulationParameters(**message.value)
-            logging.info(f"Received simulation parameters: {params}")
+            param_dict = msg.value
+            # Parse into SimulationParameters
+            params = SimulationParameters(**param_dict)
+            logging.info(f"Received simulation parameters:\n{params}")
             run_navier_stokes_solver(params)
         except Exception as e:
             logging.error(f"Error during simulation: {e}")

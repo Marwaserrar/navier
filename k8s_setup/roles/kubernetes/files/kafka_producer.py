@@ -1,81 +1,89 @@
 #!/usr/bin/env python3
 
-import random
 import json
+import random
+import math
 from kafka import KafkaProducer
 from simulation_parameters import SimulationParameters
 
-# Kafka configuration
+# Kafka producer configuration
 producer = KafkaProducer(
     bootstrap_servers="kafka-internal:9092",
     value_serializer=lambda v: json.dumps(v).encode("utf-8")
 )
 
-def generate_stable_params():
+def main():
     """
-    Generate a stable set of Navier-Stokes parameters with dynamic values that respect simulation stability conditions.
-    One parameter (e.g., grid size) dynamically influences the ranges of others (e.g., time step, viscosity).
+    Randomizes simulation parameters while ensuring T = DT * N_ITERATIONS exactly.
     """
-    # Fixed domain size (Lx and Ly set to 1.0 for simplicity)
-    Lx = 1.0
-    Ly = 1.0
 
-    # Randomize grid resolution (Nx and Ny between 30 and 80)
-    Nx = random.randint(30, 80)
-    Ny = random.randint(30, 80)
+    # 1. Define fixed domain sizes (can also be randomized if needed)
+    Lx = 1.0  # meters
+    Ly = 1.0  # meters
+
+    # 2. Randomize grid resolution Nx and Ny within [30, 60]
+    Nx = random.randint(30, 60)
+    Ny = random.randint(30, 60)
+
+    # 3. Randomize Kinematic Viscosity in [0.01, 0.1] m²/s
+    KINEMATIC_VISCOSITY = round(random.uniform(0.01, 0.1), 4)
+
+    # 4. Randomize Density in [0.5, 2.0] kg/m³
+    DENSITY = round(random.uniform(0.5, 2.0), 4)
+
+    # 5. Compute spatial steps dx and dy
     dx = Lx / (Nx - 1)
     dy = Ly / (Ny - 1)
 
-    # Randomize kinematic viscosity within a reasonable range
-    KINEMATIC_VISCOSITY = random.uniform(0.001, 0.1)
+    # 6. Compute maximum stable DT based on diffusion
+    dt_max_diffusion = 0.5 * (dx ** 2) / KINEMATIC_VISCOSITY
 
-    # Compute maximum allowable time step based on stability condition
-    max_dt = 0.5 * (dx ** 2) / KINEMATIC_VISCOSITY
+    # 7. Define a CFL-like condition for advection (assuming a characteristic velocity U)
+    #    For simplicity, assume U = 1.0 m/s; adjust as necessary
+    U = 1.0  # m/s
+    CFL = 0.5  # CFL number
+    dt_max_advection = CFL * dx / U
 
-    # Choose DT safely within 20% to 80% of max_dt to avoid instability
-    DT = random.uniform(0.2 * max_dt, 0.8 * max_dt)
+    # 8. Compute the overall maximum DT
+    dt_max = min(dt_max_diffusion, dt_max_advection)
 
-    # Determine number of iterations to ensure sufficient simulation time
-    N_ITERATIONS = random.randint(100, 1000)
+    # 9. Randomize DT within [0.2 * dt_max, 0.8 * dt_max]
+    DT = round(random.uniform(0.2 * dt_max, 0.8 * dt_max), 6)
 
-    # Compute total simulation time T
-    T = DT * N_ITERATIONS
+    # 10. Define total simulation time T in [4.0, 6.0] seconds
+    #     Alternatively, you can fix T or randomize within a different range
+    T = round(random.uniform(4.0, 6.0), 6)
 
-    # Randomize density within a reasonable range
-    DENSITY = random.uniform(0.5, 2.0)
+    # 11. Compute N_ITERATIONS to satisfy T = DT * N_ITERATIONS exactly
+    #     N_ITERATIONS must be an integer, so we calculate it as follows:
+    N_ITERATIONS = math.ceil(T / DT)  # Ensure T >= DT * N_ITERATIONS
 
-    # Fixed number of Poisson iterations for pressure correction
-    N_PRESSURE_POISSON_ITERATIONS = 50
+    # 12. Adjust T to be exactly DT * N_ITERATIONS
+    T_final = round(DT * N_ITERATIONS, 6)
 
-    return SimulationParameters(
-        T=T,
-        DT=DT,
-        dx=dx,
-        dy=dy,
+    # 13. Create SimulationParameters instance
+    params = SimulationParameters(
+        T=T_final,
         Lx=Lx,
         Ly=Ly,
-        KINEMATIC_VISCOSITY=KINEMATIC_VISCOSITY,
-        DENSITY=DENSITY,
         Nx=Nx,
         Ny=Ny,
+        KINEMATIC_VISCOSITY=KINEMATIC_VISCOSITY,
+        DENSITY=DENSITY,
+        DT=DT,
         N_ITERATIONS=N_ITERATIONS,
-        N_PRESSURE_POISSON_ITERATIONS=N_PRESSURE_POISSON_ITERATIONS,
-        gif=False,
-        plot=True
+        gif=False,  # Set to True if you want GIFs
+        plot=True   # Set to False to disable plotting
     )
 
-def main():
-    # Generate stable parameters
-    params = generate_stable_params()
+    # 14. Print parameters for debugging
+    print("Generated randomized simulation parameters (with T = DT * N_ITERATIONS):")
+    print(json.dumps(params.__dict__, indent=4))
 
-    # Print the generated parameters for debugging
-    print("Generated simulation parameters:")
-    print(params)
-
-    # Send them to Kafka
+    # 15. Send parameters to Kafka topic 'simulation-parameters'
     producer.send("simulation-parameters", value=params.__dict__)
     producer.flush()
-    print("Simulation parameters sent to the Kafka topic.")
+    print("Randomized simulation parameters sent to the Kafka topic: 'simulation-parameters'.")
 
 if __name__ == "__main__":
     main()

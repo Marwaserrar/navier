@@ -1,4 +1,3 @@
----
 # ------------------------------------------------------------------------
 # Pod 1: kafka-cli (control-plane shell)
 # ------------------------------------------------------------------------
@@ -9,12 +8,6 @@ metadata:
   labels:
     app: kafka-cli
 spec:
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
-  tolerations:
-    - key: "node-role.kubernetes.io/control-plane"
-      operator: "Exists"
-      effect: "NoSchedule"
   containers:
     - name: kafka-cli-container
       image: python:3.9-slim
@@ -24,7 +17,15 @@ spec:
           apt-get update && apt-get install -y gcc libatlas-base-dev &&
           pip install --no-cache-dir kafka-python google-cloud-storage matplotlib pillow &&
           tail -f /dev/null
-  restartPolicy: Always
+      restartPolicy: Always
+  volumeMounts:
+    - name: scripts-volume
+      mountPath: /scripts
+      readOnly: true
+  volumes:
+    - name: scripts-volume
+      hostPath:
+        path: /home/asmae/kafka-scripts
 
 ---
 apiVersion: v1
@@ -53,12 +54,6 @@ metadata:
   labels:
     app: kafka-producer
 spec:
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
-  tolerations:
-    - key: "node-role.kubernetes.io/control-plane"
-      operator: "Exists"
-      effect: "NoSchedule"
   containers:
     - name: kafka-producer-container
       image: python:3.9-slim
@@ -105,6 +100,8 @@ spec:
 # ------------------------------------------------------------------------
 # Consumer Pods 3-7 (5 instances)
 # ------------------------------------------------------------------------
+
+# Example for kafka-listener-1
 apiVersion: v1
 kind: Pod
 metadata:
@@ -112,12 +109,6 @@ metadata:
   labels:
     app: kafka-listener-1
 spec:
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
-  tolerations:
-    - key: "node-role.kubernetes.io/control-plane"
-      operator: "Exists"
-      effect: "NoSchedule"
   containers:
     - name: listener-1-container
       image: python:3.9-slim
@@ -142,9 +133,7 @@ spec:
     - name: gcp-creds
       secret:
         secretName: gcp-cred-secret
-        items:
-          - key: gcp_cred.json
-            path: credentials.json
+  restartPolicy: Always
 
 ---
 apiVersion: v1
@@ -160,6 +149,8 @@ spec:
       nodePort: 30082
   type: NodePort
 
+# Repeat similar blocks for kafka-listener-2 to kafka-listener-5
+
 ---
 apiVersion: v1
 kind: Pod
@@ -168,12 +159,6 @@ metadata:
   labels:
     app: kafka-listener-2
 spec:
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
-  tolerations:
-    - key: "node-role.kubernetes.io/control-plane"
-      operator: "Exists"
-      effect: "NoSchedule"
   containers:
     - name: listener-2-container
       image: python:3.9-slim
@@ -198,6 +183,7 @@ spec:
     - name: gcp-creds
       secret:
         secretName: gcp-cred-secret
+  restartPolicy: Always
 
 ---
 apiVersion: v1
@@ -221,12 +207,6 @@ metadata:
   labels:
     app: kafka-listener-3
 spec:
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
-  tolerations:
-    - key: "node-role.kubernetes.io/control-plane"
-      operator: "Exists"
-      effect: "NoSchedule"
   containers:
     - name: listener-3-container
       image: python:3.9-slim
@@ -251,6 +231,7 @@ spec:
     - name: gcp-creds
       secret:
         secretName: gcp-cred-secret
+  restartPolicy: Always
 
 ---
 apiVersion: v1
@@ -274,12 +255,6 @@ metadata:
   labels:
     app: kafka-listener-4
 spec:
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
-  tolerations:
-    - key: "node-role.kubernetes.io/control-plane"
-      operator: "Exists"
-      effect: "NoSchedule"
   containers:
     - name: listener-4-container
       image: python:3.9-slim
@@ -304,6 +279,7 @@ spec:
     - name: gcp-creds
       secret:
         secretName: gcp-cred-secret
+  restartPolicy: Always
 
 ---
 apiVersion: v1
@@ -327,12 +303,6 @@ metadata:
   labels:
     app: kafka-listener-5
 spec:
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
-  tolerations:
-    - key: "node-role.kubernetes.io/control-plane"
-      operator: "Exists"
-      effect: "NoSchedule"
   containers:
     - name: listener-5-container
       image: python:3.9-slim
@@ -357,6 +327,7 @@ spec:
     - name: gcp-creds
       secret:
         secretName: gcp-cred-secret
+  restartPolicy: Always
 
 ---
 apiVersion: v1
