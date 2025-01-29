@@ -1,3 +1,8 @@
+# kafka-deployment.yaml
+
+####################################
+# 1) Kafka Deployment
+####################################
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,65 +19,83 @@ spec:
       labels:
         app: kafka
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: k8s-node-2
+      # Example nodeSelector (optional): restrict to one node if desired
+      # nodeSelector:
+      #   kubernetes.io/hostname: k8s-node-2
+
       containers:
-      - name: kafka
-        image: apache/kafka:3.8.1
-        ports:
-        - containerPort: 9092
-          name: plaintext
-        - containerPort: 9093
-          name: controller
-        - containerPort: 9098
-          name: plaintext-host
-        env:
-        - name: KAFKA_ADVERTISED_LISTENERS
-          value: "PLAINTEXT://kafka-internal:9092,PLAINTEXT_HOST://kafka-loadbalancer:9098"
-        - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
-          value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
-        - name: KAFKA_LISTENERS
-          value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:9098"
-        - name: KAFKA_PROCESS_ROLES
-          value: "broker,controller"
-        - name: KAFKA_NODE_ID
-          value: "1"
-        - name: KAFKA_CONTROLLER_QUORUM_VOTERS
-          value: "1@localhost:9093"
-        - name: KAFKA_CONTROLLER_LISTENER_NAMES
-          value: "CONTROLLER"
-        - name: KAFKA_LOG_DIRS
-          value: "/tmp/kraft-combined-logs"
-        - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
-          value: "1"
-        - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
-          value: "1"
-        - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
-          value: "1"
-        command: ["/bin/bash", "-c"]
-        args:
-          - |
-            echo "Waiting for Kafka to start..."
-            sleep 10
-            echo "Creating topic simulation-parameters with 5 partitions..."
-            /opt/kafka/bin/kafka-topics.sh --create \
-              --bootstrap-server kafka-internal:9092 \
-              --replication-factor 1 \
-              --partitions 5 \
-              --topic simulation-parameters || echo "Topic already exists."
-            echo "Kafka topic simulation-parameters created!"
-            exec /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/server.properties
-        volumeMounts:
-        - name: kafka-data
-          mountPath: /tmp/kraft-combined-logs
+        - name: kafka
+          # Use official Kafka image (or your own)
+          image: apache/kafka:3.8.1
+          # We override the container's startup command to run our script
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Waiting 10 seconds for broker to become ready..."
+              sleep 10
+
+              echo "Creating topic 'simulation-parameters' with 5 partitions..."
+              /opt/kafka/bin/kafka-topics.sh --create \
+                --bootstrap-server kafka-internal:9092 \
+                --replication-factor 1 \
+                --partitions 5 \
+                --topic simulation-parameters || echo "Topic may already exist."
+
+              echo "Starting Kafka in KRaft mode..."
+              exec /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/server.properties
+
+          ports:
+            - containerPort: 9092
+              name: plaintext
+            - containerPort: 9093
+              name: controller
+            - containerPort: 9098
+              name: plaintext-host
+
+          env:
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://kafka-internal:9092,PLAINTEXT_HOST://kafka-loadbalancer:9098"
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+            - name: KAFKA_LISTENERS
+              value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:9098"
+            - name: KAFKA_PROCESS_ROLES
+              value: "broker,controller"
+            - name: KAFKA_NODE_ID
+              value: "1"
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              value: "1@localhost:9093"
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: "CONTROLLER"
+            - name: KAFKA_LOG_DIRS
+              value: "/tmp/kraft-combined-logs"
+
+            # Adjust replication factors as needed (1 for single-broker setup)
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+
+          volumeMounts:
+            - name: kafka-data
+              mountPath: /tmp/kraft-combined-logs
+
       volumes:
-      - name: kafka-data
-        emptyDir: {}
+        - name: kafka-data
+          emptyDir: {}
+
+####################################
+# 2) Kafka Internal Service (ClusterIP)
+####################################
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: kafka-internal
+  labels:
+    app: kafka
 spec:
   selector:
     app: kafka
@@ -84,11 +107,17 @@ spec:
       targetPort: 9093
       name: controller
   type: ClusterIP
+
+####################################
+# 3) Kafka LoadBalancer (NodePort)
+####################################
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: kafka-loadbalancer
+  labels:
+    app: kafka
 spec:
   selector:
     app: kafka
