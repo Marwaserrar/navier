@@ -11,8 +11,6 @@
     - name: Join workers to cluster
       import_tasks: join_workers.yaml
 
-    - name: Copy Kafka scripts to worker nodes
-      import_tasks: copy_kafka_scripts.yaml
 
     - name: Configure network
       import_tasks: configure_network.yaml
