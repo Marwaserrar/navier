@@ -69,7 +69,7 @@ const App = () => {
           return (
             <div
               key={podId}
-              className={`absolute ${positions[index]} w-[700px] h-[300px] bg-white shadow-lg rounded-lg flex items-center justify-center border-4 border-gray-200 hover:border-blue-500 transition-all duration-300`}
+              className={`absolute ${positions[index]} w-[550px] h-[250px] bg-white shadow-lg rounded-lg flex items-center justify-center border-4 border-gray-200 hover:border-blue-500 transition-all duration-300`}
             >
               {images[podId] ? (
                 <img src={images[podId]} alt={`Pod-${podId}`} className="w-full h-full object-cover rounded-lg" />
