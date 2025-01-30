@@ -11,7 +11,6 @@ const App = () => {
   const fetchImages = async () => {
     setLoading(true);
     setError("");
-
     try {
       const imageRequests = POD_IDS.map(async (podId) => {
         try {
@@ -25,7 +24,6 @@ const App = () => {
           return { podId, url: null };
         }
       });
-
       const results = await Promise.all(imageRequests);
       setImages(results.reduce((acc, { podId, url }) => ({ ...acc, [podId]: url }), {}));
     } catch (err) {
@@ -51,40 +49,38 @@ const App = () => {
   }, [images]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <h1 className="text-2xl font-bold text-primary mb-4">
-        🎯 Pod Image Dashboard
-      </h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col items-center justify-center p-4">
+      <h1 className="text-3xl font-bold text-gray-800 mb-8">Pod Image Dashboard</h1>
 
       {loading && <p className="text-gray-500 mb-4">Chargement des images...</p>}
+      {error && <div className="bg-red-100 text-red-600 p-2 rounded-lg mb-4 w-80 text-center">{error}</div>}
 
-      {error && (
-        <div className="bg-red-100 text-red-600 p-2 rounded-lg mb-4 w-80 text-center">
-          {error}
-        </div>
-      )}
-
-      <div className="flex gap-4">
-        {POD_IDS.map((podId) => (
-          <div key={podId} className="w-32 h-44 p-2 bg-white shadow-lg rounded-lg flex flex-col items-center">
-            <div className="w-28 h-28 bg-gray-200 rounded-md flex items-center justify-center">
+      <div className="relative w-80 h-80 flex items-center justify-center">
+        {POD_IDS.map((podId, index) => {
+          const positions = [
+            "top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2", // Haut (pod 1)
+            "bottom-0 left-0 transform translate-y-1/2 -translate-x-1/2", // Bas gauche (pod 2)
+            "bottom-0 right-0 transform translate-y-1/2 translate-x-1/2", // Bas droite (pod 3)
+            "top-1/2 left-0 transform -translate-y-1/2 -translate-x-1/2", // Milieu gauche (pod 4)
+            "top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2", // Milieu droite (pod 5)
+          ];
+          return (
+            <div
+              key={podId}
+              className={`absolute ${positions[index]} w-24 h-24 bg-white shadow-lg rounded-full flex items-center justify-center border-4 border-gray-200 hover:border-blue-500 transition-all duration-300`}
+            >
               {images[podId] ? (
-                <img
-                  src={images[podId]}
-                  alt={`Pod-${podId}`}
-                  className="w-full h-full object-cover rounded-md"
-                />
+                <img src={images[podId]} alt={`Pod-${podId}`} className="w-full h-full object-cover rounded-full" />
               ) : (
-                <span className="text-gray-500 text-sm">Pas d'image</span>
+                <span className="text-gray-500 text-sm">N/A</span>
               )}
             </div>
-            <h2 className="text-sm font-semibold mt-2 text-gray-700">Pod-{podId}</h2>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <button
-        className="mt-6 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-600 transition"
+        className="mt-8 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-lg shadow-md hover:from-blue-600 hover:to-purple-600 transition-all duration-300"
         onClick={fetchImages}
         disabled={loading}
       >
