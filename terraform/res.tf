@@ -61,7 +61,7 @@ resource "google_compute_firewall" "k8s_firewall" {
 
 
 resource "google_compute_instance" "k8s_nodes" {
-  count        = 3
+  count        = 4
   name         = "k8s-node-${count.index + 1}"
   machine_type = "e2-standard-2"
   zone         = "europe-west4-b"
