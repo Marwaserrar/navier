@@ -13,7 +13,7 @@ producer = KafkaProducer(
 )
 
 # Fixed parameters
-FIXED_ITERATIONS = 1000 
+FIXED_ITERATIONS = 700 
 
 def main():
     """

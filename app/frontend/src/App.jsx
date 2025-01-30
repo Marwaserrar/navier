@@ -56,7 +56,7 @@ const App = () => {
       {error && <div className="bg-red-100 text-red-600 p-2 rounded-lg mb-4 w-80 text-center">{error}</div>}
 
       
-      <div className="absolute w-2/5 h-2/5 flex items-center justify-center p-10"> 
+      <div className="absolute w-1/2 h-3/5 flex items-center justify-center p-10"> 
         {POD_IDS.map((podId, index) => {
           const positions = [
             "top-0 left-0 transform -translate-x-1/2 -translate-y-1/2",  // Haut gauche (pod 1)
