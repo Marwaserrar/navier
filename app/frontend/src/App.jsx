@@ -49,13 +49,14 @@ const App = () => {
   }, [images]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col items-center justify-center p-6 relative">
       <h1 className="text-3xl font-bold text-gray-800 mb-12">Pod Image Dashboard</h1>
 
       {loading && <p className="text-gray-500 mb-4">Chargement des images...</p>}
       {error && <div className="bg-red-100 text-red-600 p-2 rounded-lg mb-4 w-80 text-center">{error}</div>}
 
-      <div className="relative w-96 h-96 flex items-center justify-center">
+      
+      <div className="absolute w-3/5 h-3/5 flex items-center justify-center p-10"> 
         {POD_IDS.map((podId, index) => {
           const positions = [
             "top-0 left-0 transform -translate-x-1/2 -translate-y-1/2",  // Haut gauche (pod 1)
@@ -68,7 +69,7 @@ const App = () => {
           return (
             <div
               key={podId}
-              className={`absolute ${positions[index]} w-28 h-40 bg-white shadow-lg rounded-lg flex items-center justify-center border-4 border-gray-200 hover:border-blue-500 transition-all duration-300`}
+              className={`absolute ${positions[index]} w-[500px] h-[300px] bg-white shadow-lg rounded-lg flex items-center justify-center border-4 border-gray-200 hover:border-blue-500 transition-all duration-300`}
             >
               {images[podId] ? (
                 <img src={images[podId]} alt={`Pod-${podId}`} className="w-full h-full object-cover rounded-lg" />
