@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-const POD_IDS = [1, 2, 3, 4, 5];
+const POD_IDS = [1, 2, 3, 4];
 
 const App = () => {
   const [images, setImages] = useState({});
@@ -36,7 +36,7 @@ const App = () => {
 
   useEffect(() => {
     fetchImages();
-    const interval = setInterval(fetchImages, 15000);
+    const interval = setInterval(fetchImages, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -56,20 +56,20 @@ const App = () => {
       {error && <div className="bg-red-100 text-red-600 p-2 rounded-lg mb-4 w-80 text-center">{error}</div>}
 
       
-      <div className="absolute w-3/5 h-3/5 flex items-center justify-center p-10"> 
+      <div className="absolute w-2/5 h-2/5 flex items-center justify-center p-10"> 
         {POD_IDS.map((podId, index) => {
           const positions = [
             "top-0 left-0 transform -translate-x-1/2 -translate-y-1/2",  // Haut gauche (pod 1)
             "top-0 right-0 transform translate-x-1/2 -translate-y-1/2", // Haut droit (pod 2)
             "bottom-0 left-0 transform -translate-x-1/2 translate-y-1/2", // Bas gauche (pod 3)
             "bottom-0 right-0 transform translate-x-1/2 translate-y-1/2", // Bas droit (pod 4)
-            "top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2", // Centre (pod 5)
+             // "top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2", // Centre (pod 5)
           ];
 
           return (
             <div
               key={podId}
-              className={`absolute ${positions[index]} w-[500px] h-[300px] bg-white shadow-lg rounded-lg flex items-center justify-center border-4 border-gray-200 hover:border-blue-500 transition-all duration-300`}
+              className={`absolute ${positions[index]} w-[700px] h-[300px] bg-white shadow-lg rounded-lg flex items-center justify-center border-4 border-gray-200 hover:border-blue-500 transition-all duration-300`}
             >
               {images[podId] ? (
                 <img src={images[podId]} alt={`Pod-${podId}`} className="w-full h-full object-cover rounded-lg" />
