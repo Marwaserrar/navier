@@ -50,13 +50,13 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col items-center justify-center p-6 relative">
-      <h1 className="text-3xl font-bold text-gray-800 mb-12">Pod Image Dashboard</h1>
+      
 
-      {loading && <p className="text-gray-500 mb-4">Chargement des images...</p>}
+      {loading && <p className="text-gray-500 mb-4"></p>}
       {error && <div className="bg-red-100 text-red-600 p-2 rounded-lg mb-4 w-80 text-center">{error}</div>}
 
       
-      <div className="absolute w-1/2 h-3/5 flex items-center justify-center p-10"> 
+      <div className="absolute w-1/2 h-2/5 flex items-center justify-center p-10"> 
         {POD_IDS.map((podId, index) => {
           const positions = [
             "top-0 left-0 transform -translate-x-1/2 -translate-y-1/2",  // Haut gauche (pod 1)
@@ -81,13 +81,13 @@ const App = () => {
         })}
       </div>
 
-      <button
+      {/* <button
         className="mt-8 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-lg shadow-md hover:from-blue-600 hover:to-purple-600 transition-all duration-300"
         onClick={fetchImages}
         disabled={loading}
       >
         {loading ? "Chargement..." : "Rafraîchir"}
-      </button>
+      </button> */}
     </div>
   );
 };
