@@ -112,18 +112,6 @@ jobs:
           fi
         shell: bash
 
-      - name: Upload GCP credentials as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: gcp-credentials
-          path: /tmp/key-file.json
-
-      - name: Download GCP credentials artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: gcp-credentials
-          path: /tmp/
-
       - name: Verify downloaded file
         run: |
           if [ -f "/tmp/key-file.json" ]; then
